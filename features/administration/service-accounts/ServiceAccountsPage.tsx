@@ -1,0 +1,7 @@
+'use client';
+import React,{useEffect,useState}from'react';
+import {CrudTable} from '@/components/admin/CrudTable';
+import {SimpleForm} from '@/components/admin/SimpleForm';
+import {adminCreate,adminDelete,adminList,adminUpdate} from '@/lib/enterprise-admin/api';
+import type {ServiceAccount} from '@/types/enterprise-admin';
+export default function ServiceAccountsPage(){const[rows,setRows]=useState<ServiceAccount[]>([]);const[error,setError]=useState('');const[editing,setEditing]=useState<ServiceAccount|null>(null);const load=async()=>setRows(await adminList<ServiceAccount>('service-accounts'));useEffect(()=>{load().catch(e=>setError(e.message));},[]);return <main style={{padding:24}}><h1>Service Accounts</h1>{error&&<p style={{color:'crimson'}}>{error}</p>}<SimpleForm key={editing?.id??'new'} submitLabel={editing?'Update Service Account':'Create Service Account'} initialValues={editing??undefined} fields={[{name:'name',label:'Name',required:true},{name:'description',label:'Description'},{name:'status',label:'Status',placeholder:'active'}]} onSubmit={async v=>{editing?await adminUpdate('service-accounts',editing.id,v):await adminCreate('service-accounts',{...v,status:v.status||'active'});setEditing(null);await load();}}/><CrudTable rows={rows} columns={[{key:'name',label:'Name'},{key:'description',label:'Description'},{key:'status',label:'Status'},{key:'created_at',label:'Created'}]} onEdit={setEditing} onDelete={async r=>{if(confirm('Disable this service account?')){await adminDelete('service-accounts',r.id);await load();}}}/></main>}
