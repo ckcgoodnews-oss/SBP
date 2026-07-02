@@ -1,0 +1,43 @@
+{
+  "package": "SBP_EE_08_Reports_Integrations",
+  "version": "0.8.0",
+  "status": "generated",
+  "generated_at": "2026-06-27T01:47:26.329253+00:00",
+  "depends_on": "SBP_EE_07_Portals",
+  "purpose": "Add reporting, audit presentation, notification structure, and integration placeholders for payment, SMS, email, and accounting providers.",
+  "scope": [
+    "Executive dashboard scaffold",
+    "Revenue reports",
+    "Job status reports",
+    "Technician productivity reports",
+    "Inventory reports",
+    "Customer retention reports",
+    "Audit log viewer scaffold",
+    "Notification queue structure",
+    "Notification templates",
+    "Integration connection model",
+    "Stripe placeholder",
+    "Square placeholder",
+    "Twilio placeholder",
+    "SendGrid placeholder",
+    "QuickBooks placeholder",
+    "Report API route scaffolds",
+    "Integration API route scaffolds",
+    "Reporting SQL views",
+    "Integration settings screens",
+    "Validation schemas",
+    "RLS policies",
+    "Seed/demo data",
+    "Tests",
+    "Documentation"
+  ],
+  "not_in_scope": [
+    "Live Stripe/Square payment processing",
+    "Live Twilio SMS sending",
+    "Live SendGrid email sending",
+    "Live QuickBooks sync",
+    "Advanced BI warehouse",
+    "Real-time streaming analytics"
+  ],
+  "next_package": "SBP_EE_09_Industry_Templates"
+}
