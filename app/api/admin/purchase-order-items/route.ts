@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from('purchase_order_items')
-      .insert(parsed.data)
+      .insert(parsed)
       .select('*')
       .single();
 

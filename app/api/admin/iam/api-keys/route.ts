@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       const payload = withTenantId(raw, tenantId);
       for (const key of Object.keys(payload)) if (payload[key] === '') delete payload[key];
       const parsed = createServiceAccountSchema.parse(payload);
-      const { data, error } = await supabase.from('service_accounts').upsert(parsed.data, { onConflict: 'tenant_id,name' }).select('*').single();
+      const { data, error } = await supabase.from('service_accounts').upsert(parsed, { onConflict: 'tenant_id,name' }).select('*').single();
       if (error) return fail('Failed to save service account.', 500, error.message);
       return ok({ row: data }, 201);
     }
@@ -41,16 +41,16 @@ export async function POST(request: Request) {
 
     const rawKey = 'sbp_' + crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
     const keyPrefix = rawKey.slice(0, 12);
-    const scopes = parsed.data.scopes ? parsed.data.scopes.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    const scopes = parsed.scopes ? parsed.scopes.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
     const { data, error } = await supabase.from('api_keys').insert({
       tenant_id: tenantId,
-      service_account_id: parsed.data.service_account_id,
-      key_name: parsed.data.key_name,
+      service_account_id: parsed.service_account_id,
+      key_name: parsed.key_name,
       key_prefix: keyPrefix,
       key_hash: fakeHash(rawKey),
       scopes,
-      expires_at: parsed.data.expires_at || null,
+      expires_at: parsed.expires_at || null,
       active: true
     }).select('id, tenant_id, service_account_id, key_name, key_prefix, scopes, active, expires_at, created_at').single();
 

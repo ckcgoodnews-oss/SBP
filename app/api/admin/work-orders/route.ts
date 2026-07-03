@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from('work_orders')
-      .upsert(parsed.data, { onConflict: 'tenant_id,work_order_number' })
+      .upsert(parsed, { onConflict: 'tenant_id,work_order_number' })
       .select('*')
       .single();
 

@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from('audit_logs')
-      .insert(parsed.data)
+      .insert(parsed)
       .select('*')
       .single();
 

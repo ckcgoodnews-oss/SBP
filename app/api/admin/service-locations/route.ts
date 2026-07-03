@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from('service_locations')
-      .insert(parsed.data)
+      .insert(parsed)
       .select('*')
       .single();
 

@@ -37,8 +37,8 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from('work_completions')
       .insert({
-        ...parsed.data,
-        completed_at: parsed.data.completed_at || new Date().toISOString()
+        ...parsed,
+        completed_at: parsed.completed_at || new Date().toISOString()
       })
       .select('*')
       .single();
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       .from('work_orders')
       .update({ status: 'completed', completed_at: new Date().toISOString() })
       .eq('tenant_id', tenantId)
-      .eq('id', parsed.data.work_order_id);
+      .eq('id', parsed.work_order_id);
 
     return ok({ row: data }, 201);
   } catch (error) {

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     for (const key of Object.keys(payload)) if (payload[key] === '') delete payload[key];
     const parsed = createCustomRoleSchema.parse(payload);
     const supabase = createServerAdminSupabaseClient();
-    const { data, error } = await supabase.from('iam_roles').upsert(parsed.data, { onConflict: 'tenant_id,role_key' }).select('*').single();
+    const { data, error } = await supabase.from('iam_roles').upsert(parsed, { onConflict: 'tenant_id,role_key' }).select('*').single();
     if (error) return fail('Failed to save role.', 500, error.message);
     return ok({ row: data }, 201);
   } catch (error) { return handleApiError(error); }

@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from('notifications')
-      .insert(parsed.data)
+      .insert(parsed)
       .select('*')
       .single();
 

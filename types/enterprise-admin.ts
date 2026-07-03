@@ -66,3 +66,28 @@ export type AuditLog = {
   metadata?: Record<string, unknown> | null;
   created_at?: string | null;
 };
+export type AuditTimelineEvent = AuditLog & {
+  event_type?: string | null;
+  target_table?: string | null;
+};
+
+export type ServiceAccountRow = ServiceAccount & {
+  last_used_at?: string | null;
+};
+
+export type ImpersonationEvent = {
+  id: string;
+  tenant_id?: string | null;
+
+  admin_user_id?: string | null;
+  impersonated_user_id?: string | null;
+
+  impersonator_user_id?: string | null;
+  target_user_id?: string | null;
+
+  started_at?: string | null;
+  ended_at?: string | null;
+  reason?: string | null;
+};
+
+export type ImpersonationEventRow = ImpersonationEvent;

@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from('inventory_balances')
-      .upsert(parsed.data, { onConflict: 'tenant_id,product_id,warehouse_id' })
+      .upsert(parsed, { onConflict: 'tenant_id,product_id,warehouse_id' })
       .select('*')
       .single();
 

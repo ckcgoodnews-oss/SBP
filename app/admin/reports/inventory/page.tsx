@@ -8,7 +8,7 @@ type ReportRow = Record<string, unknown>;
 
 const headers = ["SKU", "Product", "Quantity On Hand", "Reorder Point", "Reorder Quantity"];
 const cells = ["sku", "name", "quantity_on_hand", "reorder_point", "reorder_quantity"];
-const moneyCols = new Set([]);
+const moneyCols = new Set<string>([]);
 
 function formatCell(key: string, value: unknown) {
   if (moneyCols.has(key)) return money(value);

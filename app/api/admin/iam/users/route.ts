@@ -38,9 +38,9 @@ export async function POST(request: Request) {
     const supabase = createServerAdminSupabaseClient();
 
     const authResult = await createSupabaseAuthUser({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      fullName: parsed.data.full_name,
+      email: parsed.email,
+      password: parsed.password,
+      fullName: parsed.full_name,
       emailConfirm: true
     });
 
@@ -48,15 +48,15 @@ export async function POST(request: Request) {
       .from('tenant_users')
       .upsert({
         tenant_id: tenantId,
-        email: parsed.data.email,
-        full_name: parsed.data.full_name,
-        role: parsed.data.role,
+        email: parsed.email,
+        full_name: parsed.full_name,
+        role: parsed.role,
         auth_user_id: authResult.user.id,
-        title: parsed.data.title || null,
-        phone: parsed.data.phone || null,
-        department_id: parsed.data.department_id || null,
-        mfa_required: parsed.data.mfa_required,
-        active: parsed.data.active
+        title: parsed.title || null,
+        phone: parsed.phone || null,
+        department_id: parsed.department_id || null,
+        mfa_required: parsed.mfa_required,
+        active: parsed.active
       }, { onConflict: 'tenant_id,email' })
       .select('*')
       .single();
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       .from('iam_roles')
       .select('id')
       .eq('tenant_id', tenantId)
-      .eq('role_key', parsed.data.role)
+      .eq('role_key', parsed.role)
       .maybeSingle();
 
     if (roleRow?.id) {
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       row: userRow,
       auth_user_id: authResult.user.id,
       auth_user_already_existed: authResult.alreadyExisted,
-      generated_password_note: parsed.data.password ? 'Password set from form.' : 'Temporary password generated server-side. Use password reset for the user.'
+      generated_password_note: parsed.password ? 'Password set from form.' : 'Temporary password generated server-side. Use password reset for the user.'
     }, 201);
   } catch (error) {
     return handleApiError(error);

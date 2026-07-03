@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     for (const key of Object.keys(payload)) if (payload[key] === '') delete payload[key];
     const parsed = createDepartmentSchema.parse(payload);
     const supabase = createServerAdminSupabaseClient();
-    const { data, error } = await supabase.from('departments').upsert(parsed.data, { onConflict: 'tenant_id,name' }).select('*').single();
+    const { data, error } = await supabase.from('departments').upsert(parsed, { onConflict: 'tenant_id,name' }).select('*').single();
     if (error) return fail('Failed to save department.', 500, error.message);
     return ok({ row: data }, 201);
   } catch (error) { return handleApiError(error); }

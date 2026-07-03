@@ -49,7 +49,10 @@ export async function POST(request: Request) {
     if (customerError || !customer) return fail('Demo customer not found.', 404, customerError?.message);
 
     const rawPayload = await readJsonOrFormData(request);
-    const payload = withTenantId({ ...rawPayload, customer_id: customer.id }, tenantId);
+	const payload = withTenantId(
+		{ ...rawPayload, customer_id: customer.id },
+		tenantId
+	) as Record<string, any>;
 
     for (const key of Object.keys(payload)) {
       if (payload[key] === '') delete payload[key];
@@ -59,7 +62,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from('appointment_requests')
-      .insert(parsed.data)
+      .insert(parsed)
       .select('*')
       .single();
 

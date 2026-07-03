@@ -44,7 +44,10 @@ export async function POST(request: Request) {
     const { tenantId } = await resolveTenantFromRequest(request);
     const employee = await getDemoTechnician(tenantId);
     const rawPayload = await readJsonOrFormData(request);
-    const payload = withTenantId({ ...rawPayload, employee_id: employee.id }, tenantId);
+	const payload = withTenantId(
+	  { ...rawPayload, employee_id: employee.id },
+	  tenantId
+	) as Record<string, any>;
 
     for (const key of Object.keys(payload)) {
       if (payload[key] === '') delete payload[key];
@@ -55,7 +58,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from('technician_job_notes')
-      .insert(parsed.data)
+      .insert(parsed)
       .select('*')
       .single();
 

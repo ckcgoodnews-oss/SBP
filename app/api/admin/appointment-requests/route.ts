@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from('appointment_requests')
-      .insert(parsed.data)
+      .insert(parsed)
       .select('*')
       .single();
 

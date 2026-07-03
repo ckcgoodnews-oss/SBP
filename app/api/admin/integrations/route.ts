@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from('integration_connections')
-      .upsert(parsed.data, { onConflict: 'tenant_id,provider' })
+      .upsert(parsed, { onConflict: 'tenant_id,provider' })
       .select('*')
       .single();
 
