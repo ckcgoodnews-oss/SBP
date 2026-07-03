@@ -1,2 +1,5 @@
-import { AdminCrudPage } from '@/components/admin/AdminCrudPage';
-export default function Page(){ return <AdminCrudPage title="Enterprise Users" apiPath="/api/admin/users" />; }
+import AdminUsersPage from '@/features/admin/users/AdminUsersPage';
+
+export default function Page() {
+  return <AdminUsersPage />;
+}
