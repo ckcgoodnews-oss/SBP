@@ -21,6 +21,21 @@ type TenantUser = {
   failed_login_count?: number | null;
 };
 
+type IamRole = {
+  id: string;
+  role_key: string;
+  display_name: string;
+  description?: string | null;
+  active?: boolean | null;
+};
+
+type Department = {
+  id: string;
+  name: string;
+  description?: string | null;
+  active?: boolean | null;
+};
+
 type ApiResponse<T> = {
   ok?: boolean;
   data?: T;
@@ -59,6 +74,11 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
+function isLocked(user: TenantUser) {
+  if (!user.locked_until) return false;
+  return new Date(user.locked_until).getTime() > Date.now();
+}
+
 function badge(label: string, tone: 'green' | 'red' | 'yellow' | 'gray' | 'blue') {
   const colors: Record<typeof tone, string> = {
     green: '#dcfce7',
@@ -83,13 +103,10 @@ function badge(label: string, tone: 'green' | 'red' | 'yellow' | 'gray' | 'blue'
   );
 }
 
-function isLocked(user: TenantUser) {
-  if (!user.locked_until) return false;
-  return new Date(user.locked_until).getTime() > Date.now();
-}
-
 export default function AdminUsersPage() {
   const [rows, setRows] = useState<TenantUser[]>([]);
+  const [roles, setRoles] = useState<IamRole[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -102,11 +119,19 @@ export default function AdminUsersPage() {
   async function load() {
     setLoading(true);
     setError('');
+
     try {
-      const data = await api<TenantUser[]>('/api/admin/users');
-      setRows(data ?? []);
+      const [usersData, rolesData, departmentsData] = await Promise.all([
+        api<TenantUser[]>('/api/admin/users'),
+        api<IamRole[]>('/api/admin/roles'),
+        api<Department[]>('/api/admin/departments'),
+      ]);
+
+      setRows(usersData ?? []);
+      setRoles((rolesData ?? []).filter((role) => role.active !== false));
+      setDepartments((departmentsData ?? []).filter((department) => department.active !== false));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load users');
+      setError(err instanceof Error ? err.message : 'Failed to load user administration data');
     } finally {
       setLoading(false);
     }
@@ -143,6 +168,7 @@ export default function AdminUsersPage() {
     setForm({
       ...emptyForm,
       tenant_id: rows[0]?.tenant_id ?? '',
+      role: roles[0]?.role_key ?? 'staff',
     });
     setDrawerOpen(true);
   }
@@ -153,7 +179,7 @@ export default function AdminUsersPage() {
       tenant_id: user.tenant_id ?? '',
       email: user.email ?? '',
       full_name: user.full_name ?? '',
-      role: user.role ?? 'staff',
+      role: user.role ?? roles[0]?.role_key ?? 'staff',
       title: user.title ?? '',
       phone: user.phone ?? '',
       department_id: user.department_id ?? '',
@@ -216,6 +242,11 @@ export default function AdminUsersPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function getRoleDisplayName(roleKey?: string | null) {
+    if (!roleKey) return '—';
+    return roles.find((role) => role.role_key === roleKey)?.display_name ?? roleKey;
   }
 
   return (
@@ -295,7 +326,7 @@ export default function AdminUsersPage() {
                     <strong>{user.full_name || 'Unnamed User'}</strong>
                     <div style={{ color: '#64748b', fontSize: 13 }}>{user.email}</div>
                   </Td>
-                  <Td>{user.role || '—'}</Td>
+                  <Td>{getRoleDisplayName(user.role)}</Td>
                   <Td>{user.title || '—'}</Td>
                   <Td>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -317,26 +348,17 @@ export default function AdminUsersPage() {
                       </button>
 
                       {user.active ? (
-                        <button
-                          style={smallButton}
-                          onClick={() => void runAction('/api/admin/users/disable', { id: user.id })}
-                        >
+                        <button style={smallButton} onClick={() => void runAction('/api/admin/users/disable', { id: user.id })}>
                           Disable
                         </button>
                       ) : (
-                        <button
-                          style={smallButton}
-                          onClick={() => void runAction('/api/admin/users/enable', { id: user.id })}
-                        >
+                        <button style={smallButton} onClick={() => void runAction('/api/admin/users/enable', { id: user.id })}>
                           Enable
                         </button>
                       )}
 
                       {isLocked(user) ? (
-                        <button
-                          style={smallButton}
-                          onClick={() => void runAction('/api/admin/users/unlock', { id: user.id })}
-                        >
+                        <button style={smallButton} onClick={() => void runAction('/api/admin/users/unlock', { id: user.id })}>
                           Unlock
                         </button>
                       ) : (
@@ -365,10 +387,7 @@ export default function AdminUsersPage() {
                         {user.mfa_required ? 'Remove MFA' : 'Require MFA'}
                       </button>
 
-                      <button
-                        style={smallButton}
-                        onClick={() => void runAction('/api/admin/users/reset-failed-logins', { id: user.id })}
-                      >
+                      <button style={smallButton} onClick={() => void runAction('/api/admin/users/reset-failed-logins', { id: user.id })}>
                         Reset Logins
                       </button>
                     </div>
@@ -399,18 +418,16 @@ export default function AdminUsersPage() {
             </div>
 
             <form onSubmit={submitForm} style={{ display: 'grid', gap: 12 }}>
-              <label>
-                Tenant ID
+              <Field label="Tenant ID">
                 <input
                   value={form.tenant_id}
                   onChange={(event) => updateForm('tenant_id', event.target.value)}
                   required
                   style={input}
                 />
-              </label>
+              </Field>
 
-              <label>
-                Email
+              <Field label="Email">
                 <input
                   type="email"
                   value={form.email}
@@ -418,69 +435,54 @@ export default function AdminUsersPage() {
                   required
                   style={input}
                 />
-              </label>
+              </Field>
 
-              <label>
-                Full Name
+              <Field label="Full Name">
                 <input
                   value={form.full_name}
                   onChange={(event) => updateForm('full_name', event.target.value)}
                   required
                   style={input}
                 />
-              </label>
+              </Field>
 
-              <label>
-                Role
-                <input
-                  value={form.role}
-                  onChange={(event) => updateForm('role', event.target.value)}
-                  style={input}
-                />
-              </label>
+              <Field label="Role">
+                <select value={form.role} onChange={(event) => updateForm('role', event.target.value)} required style={input}>
+                  <option value="">Select role</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.role_key}>
+                      {role.display_name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
 
-              <label>
-                Title
-                <input
-                  value={form.title}
-                  onChange={(event) => updateForm('title', event.target.value)}
-                  style={input}
-                />
-              </label>
+              <Field label="Title">
+                <input value={form.title} onChange={(event) => updateForm('title', event.target.value)} style={input} />
+              </Field>
 
-              <label>
-                Phone
-                <input
-                  value={form.phone}
-                  onChange={(event) => updateForm('phone', event.target.value)}
-                  style={input}
-                />
-              </label>
+              <Field label="Phone">
+                <input value={form.phone} onChange={(event) => updateForm('phone', event.target.value)} style={input} />
+              </Field>
 
-              <label>
-                Department ID
-                <input
-                  value={form.department_id}
-                  onChange={(event) => updateForm('department_id', event.target.value)}
-                  style={input}
-                />
-              </label>
+              <Field label="Department">
+                <select value={form.department_id} onChange={(event) => updateForm('department_id', event.target.value)} style={input}>
+                  <option value="">No department</option>
+                  {departments.map((department) => (
+                    <option key={department.id} value={department.id}>
+                      {department.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
 
               <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(event) => updateForm('active', event.target.checked)}
-                />
+                <input type="checkbox" checked={form.active} onChange={(event) => updateForm('active', event.target.checked)} />
                 Active
               </label>
 
               <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={form.mfa_required}
-                  onChange={(event) => updateForm('mfa_required', event.target.checked)}
-                />
+                <input type="checkbox" checked={form.mfa_required} onChange={(event) => updateForm('mfa_required', event.target.checked)} />
                 Require MFA
               </label>
 
@@ -492,6 +494,15 @@ export default function AdminUsersPage() {
         </div>
       )}
     </main>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: 'grid', gap: 4 }}>
+      <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
+      {children}
+    </label>
   );
 }
 
