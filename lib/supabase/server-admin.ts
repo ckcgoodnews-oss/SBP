@@ -11,3 +11,7 @@ export function getSupabaseAdmin() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+export function createServerAdminSupabaseClient() {
+  return getSupabaseAdmin();
+}
