@@ -2,15 +2,15 @@
 
 import React from 'react';
 
-type Tone = 'green' | 'red' | 'yellow' | 'gray' | 'blue';
+export type AdminStatusTone = 'green' | 'red' | 'yellow' | 'gray' | 'blue';
 
 type Props = {
   label: string;
-  tone: Tone;
+  tone: AdminStatusTone;
 };
 
 export default function AdminStatusBadge({ label, tone }: Props) {
-  const colors: Record<Tone, { background: string; color: string }> = {
+  const colors: Record<AdminStatusTone, { background: string; color: string }> = {
     green: { background: '#dcfce7', color: '#166534' },
     red: { background: '#fee2e2', color: '#991b1b' },
     yellow: { background: '#fef9c3', color: '#854d0e' },

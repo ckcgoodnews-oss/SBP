@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import AdminEmptyState from './AdminEmptyState';
 import AdminLoadingState from './AdminLoadingState';
+import AdminStatusBadge from './AdminStatusBadge';
 import ConfirmDialog from './ConfirmDialog';
 import { IamRole, TenantUser } from './UserTypes';
 
@@ -51,22 +52,6 @@ type PendingConfirm = {
 function isLocked(user: TenantUser) {
   if (!user.locked_until) return false;
   return new Date(user.locked_until).getTime() > Date.now();
-}
-
-function badge(label: string, tone: 'green' | 'red' | 'yellow' | 'gray' | 'blue') {
-  const colors: Record<typeof tone, string> = {
-    green: '#dcfce7',
-    red: '#fee2e2',
-    yellow: '#fef9c3',
-    gray: '#f3f4f6',
-    blue: '#dbeafe',
-  };
-
-  return (
-    <span style={{ background: colors[tone], borderRadius: 999, padding: '2px 8px', fontSize: 12, whiteSpace: 'nowrap' }}>
-      {label}
-    </span>
-  );
 }
 
 export default function UserGrid({
@@ -258,12 +243,23 @@ export default function UserGrid({
 
                   <Td>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {user.active ? badge('Active', 'green') : badge('Inactive', 'gray')}
-                      {isLocked(user) && badge('Locked', 'red')}
+                      {user.active ? (
+                        <AdminStatusBadge label="Active" tone="green" />
+                      ) : (
+                        <AdminStatusBadge label="Inactive" tone="gray" />
+                      )}
+                      {isLocked(user) && <AdminStatusBadge label="Locked" tone="red" />}
                     </div>
                   </Td>
 
-                  <Td>{user.mfa_required ? badge('MFA', 'blue') : badge('No MFA', 'yellow')}</Td>
+                  <Td>
+                    {user.mfa_required ? (
+                      <AdminStatusBadge label="MFA" tone="blue" />
+                    ) : (
+                      <AdminStatusBadge label="No MFA" tone="yellow" />
+                    )}
+                  </Td>
+
                   <Td>{user.failed_login_count ?? 0}</Td>
                   <Td>{user.last_login_at ? new Date(user.last_login_at).toLocaleString() : 'Never'}</Td>
 

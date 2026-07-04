@@ -4,6 +4,7 @@ import React from 'react';
 import AdminEmptyState from './AdminEmptyState';
 import AdminLoadingState from './AdminLoadingState';
 import AdminSectionHeader from './AdminSectionHeader';
+import AdminStatusBadge from './AdminStatusBadge';
 import { IamInvitation, IamRole } from './UserTypes';
 
 type InvitationGridProps = {
@@ -16,22 +17,6 @@ type InvitationGridProps = {
 function isExpired(invitation: IamInvitation) {
   if (!invitation.expires_at) return false;
   return new Date(invitation.expires_at).getTime() < Date.now();
-}
-
-function badge(label: string, tone: 'green' | 'red' | 'yellow' | 'gray' | 'blue') {
-  const colors: Record<typeof tone, string> = {
-    green: '#dcfce7',
-    red: '#fee2e2',
-    yellow: '#fef9c3',
-    gray: '#f3f4f6',
-    blue: '#dbeafe',
-  };
-
-  return (
-    <span style={{ background: colors[tone], borderRadius: 999, padding: '2px 8px', fontSize: 12 }}>
-      {label}
-    </span>
-  );
 }
 
 export default function InvitationGrid({
@@ -52,6 +37,26 @@ export default function InvitationGrid({
 
   async function copyLink(invitation: IamInvitation) {
     await navigator.clipboard.writeText(invitationLink(invitation));
+  }
+
+  function renderStatus(invitation: IamInvitation) {
+    if (isExpired(invitation) && invitation.status === 'pending') {
+      return <AdminStatusBadge label="Expired" tone="red" />;
+    }
+
+    if (invitation.status === 'pending') {
+      return <AdminStatusBadge label="Pending" tone="yellow" />;
+    }
+
+    if (invitation.status === 'accepted') {
+      return <AdminStatusBadge label="Accepted" tone="green" />;
+    }
+
+    if (invitation.status === 'cancelled') {
+      return <AdminStatusBadge label="Cancelled" tone="gray" />;
+    }
+
+    return <AdminStatusBadge label={invitation.status || 'Unknown'} tone="gray" />;
   }
 
   return (
@@ -90,12 +95,7 @@ export default function InvitationGrid({
                     <div style={{ color: '#64748b', fontSize: 13 }}>{invitation.email}</div>
                   </Td>
                   <Td>{getRoleName(invitation.role_key)}</Td>
-                  <Td>
-                    {invitation.status === 'pending' && !isExpired(invitation) && badge('Pending', 'yellow')}
-                    {invitation.status === 'accepted' && badge('Accepted', 'green')}
-                    {invitation.status === 'cancelled' && badge('Cancelled', 'gray')}
-                    {isExpired(invitation) && invitation.status === 'pending' && badge('Expired', 'red')}
-                  </Td>
+                  <Td>{renderStatus(invitation)}</Td>
                   <Td>{invitation.expires_at ? new Date(invitation.expires_at).toLocaleString() : '—'}</Td>
                   <Td>{invitation.created_by_email || '—'}</Td>
                   <Td>{invitation.created_at ? new Date(invitation.created_at).toLocaleString() : '—'}</Td>

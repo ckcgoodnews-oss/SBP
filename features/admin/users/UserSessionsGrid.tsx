@@ -4,6 +4,7 @@ import React from 'react';
 import AdminEmptyState from './AdminEmptyState';
 import AdminLoadingState from './AdminLoadingState';
 import AdminSectionHeader from './AdminSectionHeader';
+import AdminStatusBadge from './AdminStatusBadge';
 import { UserSession } from './useUserSessions';
 
 type UserSessionsGridProps = {
@@ -12,28 +13,12 @@ type UserSessionsGridProps = {
   onRevoke: (id: string) => void;
 };
 
-function badge(label: string, tone: 'green' | 'red' | 'yellow' | 'gray' | 'blue') {
-  const colors: Record<typeof tone, string> = {
-    green: '#dcfce7',
-    red: '#fee2e2',
-    yellow: '#fef9c3',
-    gray: '#f3f4f6',
-    blue: '#dbeafe',
-  };
-
-  return (
-    <span style={{ background: colors[tone], borderRadius: 999, padding: '2px 8px', fontSize: 12 }}>
-      {label}
-    </span>
-  );
-}
-
 function sessionStatus(session: UserSession) {
-  if (session.revoked_at) return badge('Revoked', 'red');
-  if (session.ended_at) return badge('Ended', 'gray');
-  if (session.status === 'revoked') return badge('Revoked', 'red');
-  if (session.status === 'active') return badge('Active', 'green');
-  return badge(session.status || 'Unknown', 'yellow');
+  if (session.revoked_at) return <AdminStatusBadge label="Revoked" tone="red" />;
+  if (session.ended_at) return <AdminStatusBadge label="Ended" tone="gray" />;
+  if (session.status === 'revoked') return <AdminStatusBadge label="Revoked" tone="red" />;
+  if (session.status === 'active') return <AdminStatusBadge label="Active" tone="green" />;
+  return <AdminStatusBadge label={session.status || 'Unknown'} tone="yellow" />;
 }
 
 export default function UserSessionsGrid({
