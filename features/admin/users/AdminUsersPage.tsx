@@ -7,6 +7,7 @@ import AdminUsersWorkspaceTabs, { AdminUsersWorkspaceTab } from './AdminUsersWor
 import InvitationGrid from './InvitationGrid';
 import InvitationWizard from './InvitationWizard';
 import UserAuditGrid from './UserAuditGrid';
+import UserAuditToolbar, { UserAuditActionFilter } from './UserAuditToolbar';
 import UserGrid, { SortDirection, UserSortKey } from './UserGrid';
 import UserPagination from './UserPagination';
 import UserProfileDrawer from './UserProfileDrawer';
@@ -16,9 +17,10 @@ import UserToolbar, { UserStatusFilter } from './UserToolbar';
 import { TenantUser } from './UserTypes';
 import UserWizard from './UserWizard';
 import { exportUsersCsv } from './userExport';
+import { exportUserAuditCsv } from './userAuditExport';
 import { useAdminFeedback } from './useAdminFeedback';
 import { useInvitations } from './useInvitations';
-import { useUserAudit } from './useUserAudit';
+import { useUserAudit, UserAuditEvent } from './useUserAudit';
 import { useUserSessions } from './useUserSessions';
 import { useUsers } from './useUsers';
 
@@ -35,6 +37,42 @@ function sortValue(user: TenantUser, key: UserSortKey) {
   if (!value) return '';
 
   return String(value).toLowerCase();
+}
+
+function auditMatchesFilter(event: UserAuditEvent, filter: UserAuditActionFilter) {
+  if (filter === 'all') return true;
+
+  const action = event.action ?? '';
+  const entity = event.entity_type ?? '';
+
+  if (filter === 'password_reset') return action.includes('password');
+  if (filter === 'locations') return action.includes('location');
+  if (filter === 'session') return entity.includes('session') || action.includes('session');
+  if (filter === 'invitation') return entity.includes('invitation') || action.includes('invitation');
+  if (filter === 'user') return entity.includes('user') || entity.includes('tenant_user');
+
+  return true;
+}
+
+function auditMatchesQuery(event: UserAuditEvent, query: string) {
+  const text = query.trim().toLowerCase();
+  if (!text) return true;
+
+  const searchable = [
+    event.action,
+    event.actor_email,
+    event.actor_user_id,
+    event.target_email,
+    event.target_user_id,
+    event.entity_type,
+    event.entity_id,
+    event.metadata ? JSON.stringify(event.metadata) : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return searchable.includes(text);
 }
 
 export default function AdminUsersPage() {
@@ -92,6 +130,8 @@ export default function AdminUsersPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [auditQuery, setAuditQuery] = useState('');
+  const [auditActionFilter, setAuditActionFilter] = useState<UserAuditActionFilter>('all');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [profileUser, setProfileUser] = useState<TenantUser | null>(null);
@@ -134,6 +174,12 @@ export default function AdminUsersPage() {
     const start = (safePage - 1) * pageSize;
     return sortedRows.slice(start, start + pageSize);
   }, [sortedRows, page, pageSize]);
+
+  const filteredAuditEvents = useMemo(() => {
+    return auditEvents.filter(
+      (event) => auditMatchesFilter(event, auditActionFilter) && auditMatchesQuery(event, auditQuery)
+    );
+  }, [auditEvents, auditActionFilter, auditQuery]);
 
   function changeSort(key: UserSortKey) {
     if (key === sortKey) {
@@ -289,7 +335,24 @@ export default function AdminUsersPage() {
         />
       )}
 
-      {workspaceTab === 'audit' && <UserAuditGrid loading={loadingAudit} events={auditEvents} />}
+      {workspaceTab === 'audit' && (
+        <>
+          <UserAuditToolbar
+            query={auditQuery}
+            actionFilter={auditActionFilter}
+            filteredCount={filteredAuditEvents.length}
+            totalCount={auditEvents.length}
+            onQueryChange={setAuditQuery}
+            onActionFilterChange={setAuditActionFilter}
+            onExportCsv={() => {
+              exportUserAuditCsv(filteredAuditEvents);
+              notifySuccess('Audit CSV export created.');
+            }}
+          />
+
+          <UserAuditGrid loading={loadingAudit} events={filteredAuditEvents} />
+        </>
+      )}
 
       <UserWizard
         open={wizardOpen}

@@ -4,6 +4,7 @@ import React from 'react';
 import AdminEmptyState from './AdminEmptyState';
 import AdminLoadingState from './AdminLoadingState';
 import AdminSectionHeader from './AdminSectionHeader';
+import AdminStatusBadge from './AdminStatusBadge';
 import { UserAuditEvent } from './useUserAudit';
 
 type UserAuditGridProps = {
@@ -28,8 +29,15 @@ function metadataPreview(metadata?: Record<string, unknown> | null) {
   return entries.map(([key, value]) => `${key}: ${String(value)}`).join(', ');
 }
 
-function badge(label: string) {
-  return <span style={badgeStyle}>{label}</span>;
+function actionTone(action?: string | null): 'green' | 'red' | 'yellow' | 'gray' | 'blue' {
+  const value = action ?? '';
+
+  if (value.includes('password')) return 'blue';
+  if (value.includes('lock') || value.includes('disable') || value.includes('revoked')) return 'red';
+  if (value.includes('invitation')) return 'yellow';
+  if (value.includes('updated') || value.includes('enabled')) return 'green';
+
+  return 'gray';
 }
 
 export default function UserAuditGrid({ loading, events }: UserAuditGridProps) {
@@ -64,7 +72,9 @@ export default function UserAuditGrid({ loading, events }: UserAuditGridProps) {
               {events.map((event) => (
                 <tr key={event.id}>
                   <Td>{event.created_at ? new Date(event.created_at).toLocaleString() : '—'}</Td>
-                  <Td>{badge(actionLabel(event.action))}</Td>
+                  <Td>
+                    <AdminStatusBadge label={actionLabel(event.action)} tone={actionTone(event.action)} />
+                  </Td>
                   <Td>
                     <strong>{event.target_email || '—'}</strong>
                     <div style={{ color: '#64748b', fontSize: 12 }}>
@@ -121,12 +131,4 @@ const td: React.CSSProperties = {
   borderBottom: '1px solid #f1f5f9',
   verticalAlign: 'top',
   fontSize: 14,
-};
-
-const badgeStyle: React.CSSProperties = {
-  background: '#dbeafe',
-  borderRadius: 999,
-  padding: '2px 8px',
-  fontSize: 12,
-  whiteSpace: 'nowrap',
 };
