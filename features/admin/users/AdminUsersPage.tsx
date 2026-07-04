@@ -5,14 +5,12 @@ import React, { useMemo, useState } from 'react';
 import InvitationGrid from './InvitationGrid';
 import InvitationWizard from './InvitationWizard';
 import UserGrid from './UserGrid';
-import UserSessionsGrid from './UserSessionsGrid';
 import UserStats from './UserStats';
 import UserToolbar, { UserStatusFilter } from './UserToolbar';
 import { TenantUser } from './UserTypes';
 import UserWizard from './UserWizard';
 import { exportUsersCsv } from './userExport';
 import { useInvitations } from './useInvitations';
-import { useUserSessions } from './useUserSessions';
 import { useUsers } from './useUsers';
 
 function isLocked(user: TenantUser) {
@@ -54,15 +52,6 @@ export default function AdminUsersPage() {
     createInvitation,
     cancelInvitation,
   } = useInvitations();
-
-  const {
-    sessions,
-    loadingSessions,
-    savingSession,
-    sessionError,
-    refreshSessions,
-    revokeSession,
-  } = useUserSessions();
 
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all');
@@ -108,7 +97,7 @@ export default function AdminUsersPage() {
   }
 
   async function refreshAll() {
-    await Promise.all([refresh(), refreshInvitations(), refreshSessions()]);
+    await Promise.all([refresh(), refreshInvitations()]);
   }
 
   return (
@@ -117,7 +106,7 @@ export default function AdminUsersPage() {
         <div>
           <h1 style={{ margin: 0 }}>User Management</h1>
           <p style={{ marginTop: 6, color: '#64748b' }}>
-            Manage tenant users, invitations, sessions, MFA, lockouts, and security actions.
+            Manage tenant users, invitations, account status, MFA, lockouts, and security actions.
           </p>
         </div>
 
@@ -134,9 +123,9 @@ export default function AdminUsersPage() {
 
       <UserStats users={users} />
 
-      {(error || invitationError || sessionError) && (
+      {(error || invitationError) && (
         <div style={{ background: '#fee2e2', padding: 12, borderRadius: 8, marginBottom: 16, color: '#991b1b' }}>
-          {error || invitationError || sessionError}
+          {error || invitationError}
         </div>
       )}
 
@@ -175,18 +164,12 @@ export default function AdminUsersPage() {
         onCancel={(id) => void cancelInvitation(id)}
       />
 
-      <UserSessionsGrid
-        loading={loadingSessions || savingSession}
-        sessions={sessions}
-        onRevoke={(id) => void revokeSession(id)}
-      />
-
       <UserWizard
         open={wizardOpen}
         editingUser={editingUser}
         roles={roles}
         departments={departments}
-        defaultTenantId={users[0]?.tenant_id ?? invitations[0]?.tenant_id ?? sessions[0]?.tenant_id ?? ''}
+        defaultTenantId={users[0]?.tenant_id ?? invitations[0]?.tenant_id ?? ''}
         saving={saving}
         onClose={closeWizard}
         onCreate={createUser}
@@ -196,7 +179,7 @@ export default function AdminUsersPage() {
       <InvitationWizard
         open={inviteOpen}
         roles={roles}
-        defaultTenantId={users[0]?.tenant_id ?? invitations[0]?.tenant_id ?? sessions[0]?.tenant_id ?? ''}
+        defaultTenantId={users[0]?.tenant_id ?? invitations[0]?.tenant_id ?? ''}
         saving={savingInvitation}
         onClose={() => setInviteOpen(false)}
         onCreate={createInvitation}
