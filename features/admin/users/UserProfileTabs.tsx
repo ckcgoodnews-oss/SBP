@@ -6,6 +6,7 @@ export type UserProfileTab =
   | 'overview'
   | 'security'
   | 'roles'
+  | 'locations'
   | 'sessions'
   | 'audit'
   | 'apiKeys';
@@ -19,6 +20,7 @@ const tabs: Array<{ key: UserProfileTab; label: string }> = [
   { key: 'overview', label: 'Overview' },
   { key: 'security', label: 'Security' },
   { key: 'roles', label: 'Roles' },
+  { key: 'locations', label: 'Locations' },
   { key: 'sessions', label: 'Sessions' },
   { key: 'audit', label: 'Audit' },
   { key: 'apiKeys', label: 'API Keys' },

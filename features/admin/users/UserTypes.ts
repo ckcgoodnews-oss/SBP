@@ -32,6 +32,17 @@ export type Department = {
   active?: boolean | null;
 };
 
+export type ServiceLocation = {
+  id: string;
+  tenant_id?: string | null;
+  name?: string | null;
+  display_name?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  active?: boolean | null;
+};
+
 export type IamInvitation = {
   id: string;
   tenant_id: string;

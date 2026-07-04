@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import PasswordResetDialog from './PasswordResetDialog';
 import UserApiKeysTab from './UserApiKeysTab';
 import UserAuditTab from './UserAuditTab';
+import UserLocationsTab from './UserLocationsTab';
 import UserOverviewTab from './UserOverviewTab';
 import UserProfileTabs, { UserProfileTab } from './UserProfileTabs';
 import UserRolesTab from './UserRolesTab';
@@ -155,6 +156,8 @@ export default function UserProfileDrawer({
         )}
 
         {activeTab === 'roles' && <UserRolesTab user={activeUser} roles={roles} />}
+
+        {activeTab === 'locations' && <UserLocationsTab user={activeUser} />}
 
         {activeTab === 'sessions' && (
           <UserSessionsTab user={activeUser} sessions={sessions} onRevoke={(id) => void onRevokeSession(id)} />
