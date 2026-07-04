@@ -32,6 +32,28 @@ export type Department = {
   active?: boolean | null;
 };
 
+export type IamInvitation = {
+  id: string;
+  tenant_id: string;
+  email: string;
+  full_name?: string | null;
+  role_key?: string | null;
+  invitation_token: string;
+  status: string;
+  expires_at?: string | null;
+  created_by_email?: string | null;
+  created_at?: string | null;
+};
+
+export type InvitationForm = {
+  tenant_id: string;
+  email: string;
+  full_name: string;
+  role_key: string;
+  expires_days: number;
+  created_by_email: string;
+};
+
 export type ApiResponse<T> = {
   ok?: boolean;
   data?: T;
@@ -62,4 +84,13 @@ export const emptyUserForm: UserForm = {
   department_id: '',
   mfa_required: false,
   active: true,
+};
+
+export const emptyInvitationForm: InvitationForm = {
+  tenant_id: '',
+  email: '',
+  full_name: '',
+  role_key: 'staff',
+  expires_days: 7,
+  created_by_email: 'admin@example.com',
 };

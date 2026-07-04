@@ -2,12 +2,15 @@
 
 import React, { useMemo, useState } from 'react';
 
+import InvitationGrid from './InvitationGrid';
+import InvitationWizard from './InvitationWizard';
 import UserGrid from './UserGrid';
 import UserStats from './UserStats';
 import UserToolbar, { UserStatusFilter } from './UserToolbar';
 import { TenantUser } from './UserTypes';
 import UserWizard from './UserWizard';
 import { exportUsersCsv } from './userExport';
+import { useInvitations } from './useInvitations';
 import { useUsers } from './useUsers';
 
 function isLocked(user: TenantUser) {
@@ -40,9 +43,20 @@ export default function AdminUsersPage() {
     bulkResetFailedLogins,
   } = useUsers();
 
+  const {
+    invitations,
+    loadingInvitations,
+    savingInvitation,
+    invitationError,
+    refreshInvitations,
+    createInvitation,
+    cancelInvitation,
+  } = useInvitations();
+
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all');
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
 
   const filteredRows = useMemo(() => {
@@ -82,26 +96,36 @@ export default function AdminUsersPage() {
     setEditingUser(null);
   }
 
+  async function refreshAll() {
+    await Promise.all([refresh(), refreshInvitations()]);
+  }
+
   return (
     <main style={{ padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
         <div>
           <h1 style={{ margin: 0 }}>User Management</h1>
           <p style={{ marginTop: 6, color: '#64748b' }}>
-            Manage tenant users, account status, MFA, lockouts, and security actions.
+            Manage tenant users, invitations, account status, MFA, lockouts, and security actions.
           </p>
         </div>
 
-        <button onClick={openCreate} style={primaryButton}>
-          Create User
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setInviteOpen(true)} style={secondaryButton}>
+            Invite User
+          </button>
+
+          <button onClick={openCreate} style={primaryButton}>
+            Create User
+          </button>
+        </div>
       </div>
 
       <UserStats users={users} />
 
-      {error && (
+      {(error || invitationError) && (
         <div style={{ background: '#fee2e2', padding: 12, borderRadius: 8, marginBottom: 16, color: '#991b1b' }}>
-          {error}
+          {error || invitationError}
         </div>
       )}
 
@@ -110,7 +134,7 @@ export default function AdminUsersPage() {
         statusFilter={statusFilter}
         onQueryChange={setQuery}
         onStatusFilterChange={setStatusFilter}
-        onRefresh={() => void refresh()}
+        onRefresh={() => void refreshAll()}
         onExportCsv={() => exportUsersCsv(filteredRows)}
       />
 
@@ -133,16 +157,32 @@ export default function AdminUsersPage() {
         onBulkResetFailedLogins={(selected) => void bulkResetFailedLogins(selected)}
       />
 
+      <InvitationGrid
+        loading={loadingInvitations || savingInvitation}
+        invitations={invitations}
+        roles={roles}
+        onCancel={(id) => void cancelInvitation(id)}
+      />
+
       <UserWizard
         open={wizardOpen}
         editingUser={editingUser}
         roles={roles}
         departments={departments}
-        defaultTenantId={users[0]?.tenant_id ?? ''}
+        defaultTenantId={users[0]?.tenant_id ?? invitations[0]?.tenant_id ?? ''}
         saving={saving}
         onClose={closeWizard}
         onCreate={createUser}
         onUpdate={updateUser}
+      />
+
+      <InvitationWizard
+        open={inviteOpen}
+        roles={roles}
+        defaultTenantId={users[0]?.tenant_id ?? invitations[0]?.tenant_id ?? ''}
+        saving={savingInvitation}
+        onClose={() => setInviteOpen(false)}
+        onCreate={createInvitation}
       />
     </main>
   );
@@ -152,6 +192,15 @@ const primaryButton: React.CSSProperties = {
   background: '#0f172a',
   color: 'white',
   border: 0,
+  borderRadius: 8,
+  padding: '9px 14px',
+  cursor: 'pointer',
+};
+
+const secondaryButton: React.CSSProperties = {
+  background: 'white',
+  color: '#0f172a',
+  border: '1px solid #cbd5e1',
   borderRadius: 8,
   padding: '9px 14px',
   cursor: 'pointer',
