@@ -4,10 +4,25 @@ import React, { useMemo, useState } from 'react';
 import ConfirmDialog from './ConfirmDialog';
 import { IamRole, TenantUser } from './UserTypes';
 
+export type UserSortKey =
+  | 'full_name'
+  | 'email'
+  | 'role'
+  | 'title'
+  | 'active'
+  | 'mfa_required'
+  | 'failed_login_count'
+  | 'last_login_at';
+
+export type SortDirection = 'asc' | 'desc';
+
 type UserGridProps = {
   loading: boolean;
   users: TenantUser[];
   roles: IamRole[];
+  sortKey: UserSortKey;
+  sortDirection: SortDirection;
+  onSortChange: (key: UserSortKey) => void;
   onEdit: (user: TenantUser) => void;
   onEnable: (id: string) => void;
   onDisable: (id: string) => void;
@@ -56,6 +71,9 @@ export default function UserGrid({
   loading,
   users,
   roles,
+  sortKey,
+  sortDirection,
+  onSortChange,
   onEdit,
   onEnable,
   onDisable,
@@ -79,6 +97,11 @@ export default function UserGrid({
   );
 
   const allVisibleSelected = users.length > 0 && users.every((user) => selectedIds.has(user.id));
+
+  function sortIndicator(key: UserSortKey) {
+    if (sortKey !== key) return '';
+    return sortDirection === 'asc' ? ' ▲' : ' ▼';
+  }
 
   function getRoleDisplayName(roleKey?: string | null) {
     if (!roleKey) return '—';
@@ -152,103 +175,31 @@ export default function UserGrid({
         <section style={bulkBar}>
           <strong>{selectedUsers.length} selected</strong>
 
-          <button
-            style={smallButton}
-            onClick={() =>
-              confirmBulk(
-                'Enable selected users',
-                `Enable ${selectedUsers.length} selected user account(s)?`,
-                'Enable',
-                onBulkEnable
-              )
-            }
-          >
+          <button style={smallButton} onClick={() => confirmBulk('Enable selected users', `Enable ${selectedUsers.length} selected user account(s)?`, 'Enable', onBulkEnable)}>
             Enable
           </button>
 
-          <button
-            style={smallButton}
-            onClick={() =>
-              confirmBulk(
-                'Disable selected users',
-                `Disable ${selectedUsers.length} selected user account(s)? They may lose access.`,
-                'Disable',
-                onBulkDisable,
-                true
-              )
-            }
-          >
+          <button style={smallButton} onClick={() => confirmBulk('Disable selected users', `Disable ${selectedUsers.length} selected user account(s)? They may lose access.`, 'Disable', onBulkDisable, true)}>
             Disable
           </button>
 
-          <button
-            style={smallButton}
-            onClick={() =>
-              confirmBulk(
-                'Lock selected users',
-                `Lock ${selectedUsers.length} selected user account(s)?`,
-                'Lock',
-                onBulkLock,
-                true
-              )
-            }
-          >
+          <button style={smallButton} onClick={() => confirmBulk('Lock selected users', `Lock ${selectedUsers.length} selected user account(s)?`, 'Lock', onBulkLock, true)}>
             Lock
           </button>
 
-          <button
-            style={smallButton}
-            onClick={() =>
-              confirmBulk(
-                'Unlock selected users',
-                `Unlock ${selectedUsers.length} selected user account(s)?`,
-                'Unlock',
-                onBulkUnlock
-              )
-            }
-          >
+          <button style={smallButton} onClick={() => confirmBulk('Unlock selected users', `Unlock ${selectedUsers.length} selected user account(s)?`, 'Unlock', onBulkUnlock)}>
             Unlock
           </button>
 
-          <button
-            style={smallButton}
-            onClick={() =>
-              confirmBulk(
-                'Require MFA',
-                `Require MFA for ${selectedUsers.length} selected user account(s)?`,
-                'Require MFA',
-                (rows) => onBulkRequireMfa(rows, true)
-              )
-            }
-          >
+          <button style={smallButton} onClick={() => confirmBulk('Require MFA', `Require MFA for ${selectedUsers.length} selected user account(s)?`, 'Require MFA', (rows) => onBulkRequireMfa(rows, true))}>
             Require MFA
           </button>
 
-          <button
-            style={smallButton}
-            onClick={() =>
-              confirmBulk(
-                'Remove MFA requirement',
-                `Remove MFA requirement for ${selectedUsers.length} selected user account(s)?`,
-                'Remove MFA',
-                (rows) => onBulkRequireMfa(rows, false)
-              )
-            }
-          >
+          <button style={smallButton} onClick={() => confirmBulk('Remove MFA requirement', `Remove MFA requirement for ${selectedUsers.length} selected user account(s)?`, 'Remove MFA', (rows) => onBulkRequireMfa(rows, false))}>
             Remove MFA
           </button>
 
-          <button
-            style={smallButton}
-            onClick={() =>
-              confirmBulk(
-                'Reset failed logins',
-                `Reset failed login counts for ${selectedUsers.length} selected user account(s)?`,
-                'Reset',
-                onBulkResetFailedLogins
-              )
-            }
-          >
+          <button style={smallButton} onClick={() => confirmBulk('Reset failed logins', `Reset failed login counts for ${selectedUsers.length} selected user account(s)?`, 'Reset', onBulkResetFailedLogins)}>
             Reset Logins
           </button>
 
@@ -268,41 +219,47 @@ export default function UserGrid({
                 <Th>
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} />
                 </Th>
-                <Th>User</Th>
-                <Th>Role</Th>
-                <Th>Title</Th>
-                <Th>Status</Th>
-                <Th>Security</Th>
-                <Th>Failed Logins</Th>
-                <Th>Last Login</Th>
+                <SortableTh label="User" sortKey="full_name" indicator={sortIndicator('full_name')} onSortChange={onSortChange} />
+                <SortableTh label="Email" sortKey="email" indicator={sortIndicator('email')} onSortChange={onSortChange} />
+                <SortableTh label="Role" sortKey="role" indicator={sortIndicator('role')} onSortChange={onSortChange} />
+                <SortableTh label="Title" sortKey="title" indicator={sortIndicator('title')} onSortChange={onSortChange} />
+                <SortableTh label="Status" sortKey="active" indicator={sortIndicator('active')} onSortChange={onSortChange} />
+                <SortableTh label="Security" sortKey="mfa_required" indicator={sortIndicator('mfa_required')} onSortChange={onSortChange} />
+                <SortableTh label="Failed Logins" sortKey="failed_login_count" indicator={sortIndicator('failed_login_count')} onSortChange={onSortChange} />
+                <SortableTh label="Last Login" sortKey="last_login_at" indicator={sortIndicator('last_login_at')} onSortChange={onSortChange} />
                 <Th>Actions</Th>
               </tr>
             </thead>
+
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
                   <Td>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(user.id)}
-                      onChange={() => toggleSelected(user.id)}
-                    />
+                    <input checked={selectedIds.has(user.id)} type="checkbox" onChange={() => toggleSelected(user.id)} />
                   </Td>
+
                   <Td>
                     <strong>{user.full_name || 'Unnamed User'}</strong>
+                  </Td>
+
+                  <Td>
                     <div style={{ color: '#64748b', fontSize: 13 }}>{user.email}</div>
                   </Td>
+
                   <Td>{getRoleDisplayName(user.role)}</Td>
                   <Td>{user.title || '—'}</Td>
+
                   <Td>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {user.active ? badge('Active', 'green') : badge('Inactive', 'gray')}
                       {isLocked(user) && badge('Locked', 'red')}
                     </div>
                   </Td>
+
                   <Td>{user.mfa_required ? badge('MFA', 'blue') : badge('No MFA', 'yellow')}</Td>
                   <Td>{user.failed_login_count ?? 0}</Td>
                   <Td>{user.last_login_at ? new Date(user.last_login_at).toLocaleString() : 'Never'}</Td>
+
                   <Td>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       <button style={smallButton} onClick={() => onEdit(user)}>Edit</button>
@@ -381,7 +338,7 @@ export default function UserGrid({
 
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={9} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={10} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
                     No users found.
                   </td>
                 </tr>
@@ -401,6 +358,27 @@ export default function UserGrid({
         onCancel={() => setPendingConfirm(null)}
       />
     </div>
+  );
+}
+
+function SortableTh({
+  label,
+  sortKey,
+  indicator,
+  onSortChange,
+}: {
+  label: string;
+  sortKey: UserSortKey;
+  indicator: string;
+  onSortChange: (key: UserSortKey) => void;
+}) {
+  return (
+    <th style={th}>
+      <button type="button" style={sortButton} onClick={() => onSortChange(sortKey)}>
+        {label}
+        {indicator}
+      </button>
+    </th>
   );
 }
 
@@ -442,6 +420,7 @@ const th: React.CSSProperties = {
   borderBottom: '1px solid #e2e8f0',
   background: '#f8fafc',
   fontSize: 13,
+  whiteSpace: 'nowrap',
 };
 
 const td: React.CSSProperties = {
@@ -459,4 +438,13 @@ const smallButton: React.CSSProperties = {
   padding: '5px 8px',
   fontSize: 12,
   cursor: 'pointer',
+};
+
+const sortButton: React.CSSProperties = {
+  background: 'transparent',
+  border: 0,
+  padding: 0,
+  cursor: 'pointer',
+  fontWeight: 700,
+  color: '#0f172a',
 };

@@ -7,8 +7,12 @@ export type UserStatusFilter = 'all' | 'active' | 'inactive' | 'locked' | 'mfa';
 type UserToolbarProps = {
   query: string;
   statusFilter: UserStatusFilter;
+  pageSize: number;
+  totalCount: number;
+  filteredCount: number;
   onQueryChange: (value: string) => void;
   onStatusFilterChange: (value: UserStatusFilter) => void;
+  onPageSizeChange: (value: number) => void;
   onRefresh: () => void;
   onExportCsv: () => void;
 };
@@ -16,8 +20,12 @@ type UserToolbarProps = {
 export default function UserToolbar({
   query,
   statusFilter,
+  pageSize,
+  totalCount,
+  filteredCount,
   onQueryChange,
   onStatusFilterChange,
+  onPageSizeChange,
   onRefresh,
   onExportCsv,
 }: UserToolbarProps) {
@@ -30,17 +38,24 @@ export default function UserToolbar({
         style={input}
       />
 
-      <select
-        value={statusFilter}
-        onChange={(event) => onStatusFilterChange(event.target.value as UserStatusFilter)}
-        style={select}
-      >
+      <select value={statusFilter} onChange={(event) => onStatusFilterChange(event.target.value as UserStatusFilter)} style={select}>
         <option value="all">All users</option>
         <option value="active">Active</option>
         <option value="inactive">Inactive</option>
         <option value="locked">Locked</option>
         <option value="mfa">MFA required</option>
       </select>
+
+      <select value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))} style={select}>
+        <option value={10}>10 / page</option>
+        <option value={25}>25 / page</option>
+        <option value={50}>50 / page</option>
+        <option value={100}>100 / page</option>
+      </select>
+
+      <span style={countText}>
+        {filteredCount} of {totalCount}
+      </span>
 
       <button onClick={onRefresh} style={secondaryButton}>
         Refresh
@@ -57,10 +72,12 @@ const toolbar: React.CSSProperties = {
   display: 'flex',
   gap: 12,
   marginBottom: 16,
+  alignItems: 'center',
+  flexWrap: 'wrap',
 };
 
 const input: React.CSSProperties = {
-  width: '100%',
+  flex: '1 1 280px',
   padding: '9px 10px',
   border: '1px solid #cbd5e1',
   borderRadius: 8,
@@ -70,6 +87,12 @@ const select: React.CSSProperties = {
   padding: '9px 10px',
   border: '1px solid #cbd5e1',
   borderRadius: 8,
+};
+
+const countText: React.CSSProperties = {
+  color: '#64748b',
+  fontSize: 13,
+  whiteSpace: 'nowrap',
 };
 
 const secondaryButton: React.CSSProperties = {

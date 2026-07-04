@@ -6,7 +6,8 @@ import AdminToast from './AdminToast';
 import InvitationGrid from './InvitationGrid';
 import InvitationWizard from './InvitationWizard';
 import UserAuditGrid from './UserAuditGrid';
-import UserGrid from './UserGrid';
+import UserGrid, { SortDirection, UserSortKey } from './UserGrid';
+import UserPagination from './UserPagination';
 import UserProfileDrawer from './UserProfileDrawer';
 import UserSessionsGrid from './UserSessionsGrid';
 import UserStats from './UserStats';
@@ -23,6 +24,16 @@ import { useUsers } from './useUsers';
 function isLocked(user: TenantUser) {
   if (!user.locked_until) return false;
   return new Date(user.locked_until).getTime() > Date.now();
+}
+
+function sortValue(user: TenantUser, key: UserSortKey) {
+  const value = user[key];
+
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (typeof value === 'number') return value;
+  if (!value) return '';
+
+  return String(value).toLowerCase();
 }
 
 export default function AdminUsersPage() {
@@ -70,17 +81,15 @@ export default function AdminUsersPage() {
     revokeSession,
   } = useUserSessions();
 
-  const {
-    auditEvents,
-    loadingAudit,
-    auditError,
-    refreshAudit,
-  } = useUserAudit();
-
+  const { auditEvents, loadingAudit, auditError, refreshAudit } = useUserAudit();
   const { toast, notifySuccess, notifyError, clearToast } = useAdminFeedback();
 
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all');
+  const [sortKey, setSortKey] = useState<UserSortKey>('full_name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [profileUser, setProfileUser] = useState<TenantUser | null>(null);
@@ -106,6 +115,49 @@ export default function AdminUsersPage() {
       return matchesText && matchesStatus;
     });
   }, [users, query, statusFilter]);
+
+  const sortedRows = useMemo(() => {
+    return [...filteredRows].sort((a, b) => {
+      const aValue = sortValue(a, sortKey);
+      const bValue = sortValue(b, sortKey);
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredRows, sortKey, sortDirection]);
+
+  const pagedRows = useMemo(() => {
+    const safePage = Math.max(1, page);
+    const start = (safePage - 1) * pageSize;
+    return sortedRows.slice(start, start + pageSize);
+  }, [sortedRows, page, pageSize]);
+
+  function changeSort(key: UserSortKey) {
+    if (key === sortKey) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+
+    setPage(1);
+  }
+
+  function changeQuery(value: string) {
+    setQuery(value);
+    setPage(1);
+  }
+
+  function changeStatus(value: UserStatusFilter) {
+    setStatusFilter(value);
+    setPage(1);
+  }
+
+  function changePageSize(value: number) {
+    setPageSize(value);
+    setPage(1);
+  }
 
   async function refreshAll() {
     await Promise.all([refresh(), refreshInvitations(), refreshSessions(), refreshAudit()]);
@@ -155,36 +207,46 @@ export default function AdminUsersPage() {
       <UserToolbar
         query={query}
         statusFilter={statusFilter}
-        onQueryChange={setQuery}
-        onStatusFilterChange={setStatusFilter}
+        pageSize={pageSize}
+        totalCount={users.length}
+        filteredCount={filteredRows.length}
+        onQueryChange={changeQuery}
+        onStatusFilterChange={changeStatus}
+        onPageSizeChange={changePageSize}
         onRefresh={() => void refreshAll()}
         onExportCsv={() => {
-          exportUsersCsv(filteredRows);
+          exportUsersCsv(sortedRows);
           notifySuccess('CSV export created.');
         }}
       />
 
       <UserGrid
         loading={loading || saving}
-        users={filteredRows}
+        users={pagedRows}
         roles={roles}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSortChange={changeSort}
         onEdit={setProfileUser}
         onEnable={(id) => runAction(() => enableUser(id), 'User enabled.')}
         onDisable={(id) => runAction(() => disableUser(id), 'User disabled.')}
         onLock={(id) => runAction(() => lockUser(id, 'Locked from administration console'), 'User locked.')}
         onUnlock={(id) => runAction(() => unlockUser(id), 'User unlocked.')}
-        onRequireMfa={(id, required) =>
-          runAction(() => requireMfa(id, required), required ? 'MFA required.' : 'MFA requirement removed.')
-        }
+        onRequireMfa={(id, required) => runAction(() => requireMfa(id, required), required ? 'MFA required.' : 'MFA requirement removed.')}
         onResetFailedLogins={(id) => runAction(() => resetFailedLogins(id), 'Failed login count reset.')}
         onBulkEnable={(selected) => runAction(() => bulkEnableUsers(selected), 'Selected users enabled.')}
         onBulkDisable={(selected) => runAction(() => bulkDisableUsers(selected), 'Selected users disabled.')}
         onBulkLock={(selected) => runAction(() => bulkLockUsers(selected), 'Selected users locked.')}
         onBulkUnlock={(selected) => runAction(() => bulkUnlockUsers(selected), 'Selected users unlocked.')}
-        onBulkRequireMfa={(selected, required) =>
-          runAction(() => bulkRequireMfa(selected, required), required ? 'MFA required for selected users.' : 'MFA removed for selected users.')
-        }
+        onBulkRequireMfa={(selected, required) => runAction(() => bulkRequireMfa(selected, required), required ? 'MFA required for selected users.' : 'MFA removed for selected users.')}
         onBulkResetFailedLogins={(selected) => runAction(() => bulkResetFailedLogins(selected), 'Failed login counts reset.')}
+      />
+
+      <UserPagination
+        page={page}
+        pageSize={pageSize}
+        totalCount={sortedRows.length}
+        onPageChange={setPage}
       />
 
       <InvitationGrid
