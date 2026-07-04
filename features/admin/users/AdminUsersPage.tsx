@@ -5,9 +5,8 @@ import React, { useMemo, useState } from 'react';
 import UserGrid from './UserGrid';
 import UserStats from './UserStats';
 import UserToolbar, { UserStatusFilter } from './UserToolbar';
-import { TenantUser } from './UserTypes';
 import UserWizard from './UserWizard';
-import { exportUsersCsv } from './userExport';
+import { TenantUser } from './UserTypes';
 import { useUsers } from './useUsers';
 
 function isLocked(user: TenantUser) {
@@ -105,7 +104,6 @@ export default function AdminUsersPage() {
         onQueryChange={setQuery}
         onStatusFilterChange={setStatusFilter}
         onRefresh={() => void refresh()}
-        onExportCsv={() => exportUsersCsv(filteredRows)}
       />
 
       <UserGrid

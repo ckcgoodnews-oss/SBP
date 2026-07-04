@@ -10,7 +10,6 @@ type UserToolbarProps = {
   onQueryChange: (value: string) => void;
   onStatusFilterChange: (value: UserStatusFilter) => void;
   onRefresh: () => void;
-  onExportCsv: () => void;
 };
 
 export default function UserToolbar({
@@ -19,7 +18,6 @@ export default function UserToolbar({
   onQueryChange,
   onStatusFilterChange,
   onRefresh,
-  onExportCsv,
 }: UserToolbarProps) {
   return (
     <section style={toolbar}>
@@ -44,10 +42,6 @@ export default function UserToolbar({
 
       <button onClick={onRefresh} style={secondaryButton}>
         Refresh
-      </button>
-
-      <button onClick={onExportCsv} style={secondaryButton}>
-        Export CSV
       </button>
     </section>
   );
@@ -79,5 +73,4 @@ const secondaryButton: React.CSSProperties = {
   borderRadius: 8,
   padding: '9px 14px',
   cursor: 'pointer',
-  whiteSpace: 'nowrap',
 };
