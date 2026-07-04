@@ -112,7 +112,11 @@ export function useUsers() {
     }
   }
 
-  async function runSingleAction(endpoint: string, body: Record<string, unknown>, failureMessage: string) {
+  async function runSingleAction(
+    endpoint: string,
+    body: Record<string, unknown>,
+    failureMessage: string
+  ) {
     setSaving(true);
     setError('');
 
@@ -150,6 +154,29 @@ export function useUsers() {
     }
   }
 
+  async function requestPasswordReset(userId: string, forcePasswordChange: boolean) {
+    setSaving(true);
+    setError('');
+
+    try {
+      await api('/api/admin/users/password-reset', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId,
+          forcePasswordChange,
+          actorEmail: 'admin@example.com',
+        }),
+      });
+
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to request password reset');
+      throw e;
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return {
     loading,
     saving,
@@ -181,12 +208,7 @@ export function useUsers() {
     resetFailedLogins: (id: string) =>
       runSingleAction('/api/admin/users/reset-failed-logins', { id }, 'Failed to reset failed logins'),
 
-    requestPasswordReset: (userId: string, forcePasswordChange: boolean) =>
-      runSingleAction(
-        '/api/admin/users/password-reset',
-        { userId, forcePasswordChange, actorEmail: 'admin@example.com' },
-        'Failed to request password reset'
-      ),
+    requestPasswordReset,
 
     bulkEnableUsers: (selected: TenantUser[]) =>
       runBulkAction(
