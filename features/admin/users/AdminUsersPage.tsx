@@ -40,6 +40,7 @@ export default function AdminUsersPage() {
     unlockUser,
     requireMfa,
     resetFailedLogins,
+    requestPasswordReset,
     bulkEnableUsers,
     bulkDisableUsers,
     bulkLockUsers,
@@ -216,6 +217,7 @@ export default function AdminUsersPage() {
         onRequireMfa={requireMfa}
         onResetFailedLogins={resetFailedLogins}
         onRevokeSession={revokeSession}
+        onPasswordReset={requestPasswordReset}
       />
     </main>
   );

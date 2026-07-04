@@ -112,11 +112,7 @@ export function useUsers() {
     }
   }
 
-  async function runSingleAction(
-    endpoint: string,
-    body: Record<string, unknown>,
-    failureMessage: string
-  ) {
+  async function runSingleAction(endpoint: string, body: Record<string, unknown>, failureMessage: string) {
     setSaving(true);
     setError('');
 
@@ -184,6 +180,13 @@ export function useUsers() {
 
     resetFailedLogins: (id: string) =>
       runSingleAction('/api/admin/users/reset-failed-logins', { id }, 'Failed to reset failed logins'),
+
+    requestPasswordReset: (userId: string, forcePasswordChange: boolean) =>
+      runSingleAction(
+        '/api/admin/users/password-reset',
+        { userId, forcePasswordChange, actorEmail: 'admin@example.com' },
+        'Failed to request password reset'
+      ),
 
     bulkEnableUsers: (selected: TenantUser[]) =>
       runBulkAction(

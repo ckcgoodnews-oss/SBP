@@ -14,6 +14,7 @@ type Props = {
   onLock: () => void;
   onUnlock: () => void;
   onResetFailedLogins: () => void;
+  onPasswordReset: () => void;
 };
 
 function isLocked(user: TenantUser) {
@@ -32,6 +33,7 @@ export default function UserSecurityTab({
   onLock,
   onUnlock,
   onResetFailedLogins,
+  onPasswordReset,
 }: Props) {
   const locked = isLocked(user);
 
@@ -63,6 +65,17 @@ export default function UserSecurityTab({
         </button>
       </div>
 
+      <div style={card}>
+        <h3 style={heading}>Password Reset</h3>
+        <p style={{ color: '#64748b', marginTop: 0 }}>
+          Send a password reset request for this user. Email delivery is stubbed and ready for SendGrid/Supabase Auth integration.
+        </p>
+
+        <button type="button" style={secondaryButton} onClick={onPasswordReset}>
+          Send Password Reset
+        </button>
+      </div>
+
       <div style={actionGrid}>
         {user.active ? (
           <button type="button" style={secondaryButton} onClick={onDisable}>
@@ -86,10 +99,6 @@ export default function UserSecurityTab({
 
         <button type="button" style={secondaryButton} onClick={onResetFailedLogins}>
           Reset Failed Logins
-        </button>
-
-        <button type="button" style={disabledButton} disabled>
-          Password Reset Coming Next
         </button>
       </div>
     </section>
@@ -158,12 +167,4 @@ const secondaryButton: React.CSSProperties = {
   borderRadius: 8,
   padding: '9px 14px',
   cursor: 'pointer',
-};
-
-const disabledButton: React.CSSProperties = {
-  background: '#f1f5f9',
-  color: '#64748b',
-  border: '1px solid #cbd5e1',
-  borderRadius: 8,
-  padding: '9px 14px',
 };

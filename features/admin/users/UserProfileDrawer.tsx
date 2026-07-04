@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 
+import PasswordResetDialog from './PasswordResetDialog';
 import UserApiKeysTab from './UserApiKeysTab';
 import UserAuditTab from './UserAuditTab';
 import UserOverviewTab from './UserOverviewTab';
@@ -30,6 +31,7 @@ type Props = {
   onRequireMfa: (id: string, required: boolean) => Promise<unknown>;
   onResetFailedLogins: (id: string) => Promise<unknown>;
   onRevokeSession: (id: string) => Promise<unknown>;
+  onPasswordReset: (id: string, forcePasswordChange: boolean) => Promise<unknown>;
 };
 
 function buildForm(user: TenantUser | null): UserForm {
@@ -63,59 +65,56 @@ export default function UserProfileDrawer({
   onRequireMfa,
   onResetFailedLogins,
   onRevokeSession,
+  onPasswordReset,
 }: Props) {
   const [activeTab, setActiveTab] = useState<UserProfileTab>('overview');
   const [form, setForm] = useState<UserForm>(() => buildForm(user));
   const [localError, setLocalError] = useState('');
+  const [passwordResetOpen, setPasswordResetOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setActiveTab('overview');
     setLocalError('');
+    setPasswordResetOpen(false);
     setForm(buildForm(user));
   }, [open, user]);
 
   if (!open || !user) return null;
 
+  const currentUser = user;
+
   function updateForm<K extends keyof UserForm>(key: K, value: UserForm[K]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  async function save() {
+    if (!form.email.includes('@')) {
+      setLocalError('A valid email is required.');
+      return;
+    }
 
+    if (!form.full_name.trim()) {
+      setLocalError('Full name is required.');
+      return;
+    }
 
-async function save() {
-  if (!user) return;
-
-  if (!form.email.includes('@')) {
-    setLocalError('A valid email is required.');
-    return;
+    setLocalError('');
+    await onUpdate(currentUser.id, form);
   }
 
-  if (!form.full_name.trim()) {
-    setLocalError('Full name is required.');
-    return;
+  async function saveSecurity() {
+    await onRequireMfa(currentUser.id, form.mfa_required);
+    await save();
   }
-
-  setLocalError('');
-  await onUpdate(user.id, form);
-}
-
-async function saveSecurity() {
-  if (!user) return;
-
-  await onRequireMfa(user.id, form.mfa_required);
-  await save();
-}
-
-
 
   return (
     <div style={backdrop}>
       <aside style={drawer}>
         <div style={header}>
           <div>
-            <h2 style={{ margin: 0 }}>{user.full_name || user.email}</h2>
-            <p style={{ margin: '6px 0 0', color: '#64748b' }}>{user.email}</p>
+            <h2 style={{ margin: 0 }}>{currentUser.full_name || currentUser.email}</h2>
+            <p style={{ margin: '6px 0 0', color: '#64748b' }}>{currentUser.email}</p>
           </div>
 
           <button type="button" style={smallButton} onClick={onClose}>
@@ -129,7 +128,7 @@ async function saveSecurity() {
 
         {activeTab === 'overview' && (
           <UserOverviewTab
-            user={user}
+            user={currentUser}
             form={form}
             roles={roles}
             departments={departments}
@@ -141,28 +140,37 @@ async function saveSecurity() {
 
         {activeTab === 'security' && (
           <UserSecurityTab
-            user={user}
+            user={currentUser}
             form={form}
             saving={saving}
             onChange={updateForm}
             onSave={() => void saveSecurity()}
-            onEnable={() => void onEnable(user.id)}
-            onDisable={() => void onDisable(user.id)}
-            onLock={() => void onLock(user.id, 'Locked from user profile drawer')}
-            onUnlock={() => void onUnlock(user.id)}
-            onResetFailedLogins={() => void onResetFailedLogins(user.id)}
+            onEnable={() => void onEnable(currentUser.id)}
+            onDisable={() => void onDisable(currentUser.id)}
+            onLock={() => void onLock(currentUser.id, 'Locked from user profile drawer')}
+            onUnlock={() => void onUnlock(currentUser.id)}
+            onResetFailedLogins={() => void onResetFailedLogins(currentUser.id)}
+            onPasswordReset={() => setPasswordResetOpen(true)}
           />
         )}
 
-        {activeTab === 'roles' && <UserRolesTab user={user} roles={roles} />}
+        {activeTab === 'roles' && <UserRolesTab user={currentUser} roles={roles} />}
 
         {activeTab === 'sessions' && (
-          <UserSessionsTab user={user} sessions={sessions} onRevoke={(id) => void onRevokeSession(id)} />
+          <UserSessionsTab user={currentUser} sessions={sessions} onRevoke={(id) => void onRevokeSession(id)} />
         )}
 
-        {activeTab === 'audit' && <UserAuditTab user={user} events={auditEvents} />}
+        {activeTab === 'audit' && <UserAuditTab user={currentUser} events={auditEvents} />}
 
-        {activeTab === 'apiKeys' && <UserApiKeysTab user={user} />}
+        {activeTab === 'apiKeys' && <UserApiKeysTab user={currentUser} />}
+
+        <PasswordResetDialog
+          open={passwordResetOpen}
+          user={currentUser}
+          saving={saving}
+          onClose={() => setPasswordResetOpen(false)}
+          onSend={onPasswordReset}
+        />
       </aside>
     </div>
   );
