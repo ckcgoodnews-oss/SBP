@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import ConfirmDialog from './ConfirmDialog';
 import { IamRole, TenantUser } from './UserTypes';
 
 type UserGridProps = {
@@ -20,6 +21,14 @@ type UserGridProps = {
   onBulkUnlock: (users: TenantUser[]) => void;
   onBulkRequireMfa: (users: TenantUser[], required: boolean) => void;
   onBulkResetFailedLogins: (users: TenantUser[]) => void;
+};
+
+type PendingConfirm = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  danger?: boolean;
+  action: () => void;
 };
 
 function isLocked(user: TenantUser) {
@@ -62,6 +71,7 @@ export default function UserGrid({
   onBulkResetFailedLogins,
 }: UserGridProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
   const selectedUsers = useMemo(
     () => users.filter((user) => selectedIds.has(user.id)),
@@ -73,6 +83,10 @@ export default function UserGrid({
   function getRoleDisplayName(roleKey?: string | null) {
     if (!roleKey) return '—';
     return roles.find((role) => role.role_key === roleKey)?.display_name ?? roleKey;
+  }
+
+  function displayName(user: TenantUser) {
+    return user.full_name || user.email || 'this user';
   }
 
   function toggleSelected(id: string) {
@@ -102,10 +116,34 @@ export default function UserGrid({
     setSelectedIds(new Set());
   }
 
-  function runBulk(action: (users: TenantUser[]) => void) {
+  function confirmAction(confirm: PendingConfirm) {
+    setPendingConfirm(confirm);
+  }
+
+  function runConfirmedAction() {
+    pendingConfirm?.action();
+    setPendingConfirm(null);
+  }
+
+  function confirmBulk(
+    title: string,
+    message: string,
+    confirmLabel: string,
+    action: (users: TenantUser[]) => void,
+    danger = false
+  ) {
     if (selectedUsers.length === 0) return;
-    action(selectedUsers);
-    clearSelection();
+
+    confirmAction({
+      title,
+      message,
+      confirmLabel,
+      danger,
+      action: () => {
+        action(selectedUsers);
+        clearSelection();
+      },
+    });
   }
 
   return (
@@ -114,31 +152,103 @@ export default function UserGrid({
         <section style={bulkBar}>
           <strong>{selectedUsers.length} selected</strong>
 
-          <button style={smallButton} onClick={() => runBulk(onBulkEnable)}>
+          <button
+            style={smallButton}
+            onClick={() =>
+              confirmBulk(
+                'Enable selected users',
+                `Enable ${selectedUsers.length} selected user account(s)?`,
+                'Enable',
+                onBulkEnable
+              )
+            }
+          >
             Enable
           </button>
 
-          <button style={smallButton} onClick={() => runBulk(onBulkDisable)}>
+          <button
+            style={smallButton}
+            onClick={() =>
+              confirmBulk(
+                'Disable selected users',
+                `Disable ${selectedUsers.length} selected user account(s)? They may lose access.`,
+                'Disable',
+                onBulkDisable,
+                true
+              )
+            }
+          >
             Disable
           </button>
 
-          <button style={smallButton} onClick={() => runBulk(onBulkLock)}>
+          <button
+            style={smallButton}
+            onClick={() =>
+              confirmBulk(
+                'Lock selected users',
+                `Lock ${selectedUsers.length} selected user account(s)?`,
+                'Lock',
+                onBulkLock,
+                true
+              )
+            }
+          >
             Lock
           </button>
 
-          <button style={smallButton} onClick={() => runBulk(onBulkUnlock)}>
+          <button
+            style={smallButton}
+            onClick={() =>
+              confirmBulk(
+                'Unlock selected users',
+                `Unlock ${selectedUsers.length} selected user account(s)?`,
+                'Unlock',
+                onBulkUnlock
+              )
+            }
+          >
             Unlock
           </button>
 
-          <button style={smallButton} onClick={() => runBulk((rows) => onBulkRequireMfa(rows, true))}>
+          <button
+            style={smallButton}
+            onClick={() =>
+              confirmBulk(
+                'Require MFA',
+                `Require MFA for ${selectedUsers.length} selected user account(s)?`,
+                'Require MFA',
+                (rows) => onBulkRequireMfa(rows, true)
+              )
+            }
+          >
             Require MFA
           </button>
 
-          <button style={smallButton} onClick={() => runBulk((rows) => onBulkRequireMfa(rows, false))}>
+          <button
+            style={smallButton}
+            onClick={() =>
+              confirmBulk(
+                'Remove MFA requirement',
+                `Remove MFA requirement for ${selectedUsers.length} selected user account(s)?`,
+                'Remove MFA',
+                (rows) => onBulkRequireMfa(rows, false)
+              )
+            }
+          >
             Remove MFA
           </button>
 
-          <button style={smallButton} onClick={() => runBulk(onBulkResetFailedLogins)}>
+          <button
+            style={smallButton}
+            onClick={() =>
+              confirmBulk(
+                'Reset failed logins',
+                `Reset failed login counts for ${selectedUsers.length} selected user account(s)?`,
+                'Reset',
+                onBulkResetFailedLogins
+              )
+            }
+          >
             Reset Logins
           </button>
 
@@ -196,20 +306,74 @@ export default function UserGrid({
                   <Td>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       <button style={smallButton} onClick={() => onEdit(user)}>Edit</button>
+
                       {user.active ? (
-                        <button style={smallButton} onClick={() => onDisable(user.id)}>Disable</button>
+                        <button
+                          style={smallButton}
+                          onClick={() =>
+                            confirmAction({
+                              title: 'Disable user',
+                              message: `Disable ${displayName(user)}? This may prevent access.`,
+                              confirmLabel: 'Disable',
+                              danger: true,
+                              action: () => onDisable(user.id),
+                            })
+                          }
+                        >
+                          Disable
+                        </button>
                       ) : (
                         <button style={smallButton} onClick={() => onEnable(user.id)}>Enable</button>
                       )}
+
                       {isLocked(user) ? (
                         <button style={smallButton} onClick={() => onUnlock(user.id)}>Unlock</button>
                       ) : (
-                        <button style={smallButton} onClick={() => onLock(user.id)}>Lock</button>
+                        <button
+                          style={smallButton}
+                          onClick={() =>
+                            confirmAction({
+                              title: 'Lock user',
+                              message: `Lock ${displayName(user)}?`,
+                              confirmLabel: 'Lock',
+                              danger: true,
+                              action: () => onLock(user.id),
+                            })
+                          }
+                        >
+                          Lock
+                        </button>
                       )}
-                      <button style={smallButton} onClick={() => onRequireMfa(user.id, !user.mfa_required)}>
+
+                      <button
+                        style={smallButton}
+                        onClick={() =>
+                          confirmAction({
+                            title: user.mfa_required ? 'Remove MFA requirement' : 'Require MFA',
+                            message: user.mfa_required
+                              ? `Remove MFA requirement for ${displayName(user)}?`
+                              : `Require MFA for ${displayName(user)}?`,
+                            confirmLabel: user.mfa_required ? 'Remove MFA' : 'Require MFA',
+                            action: () => onRequireMfa(user.id, !user.mfa_required),
+                          })
+                        }
+                      >
                         {user.mfa_required ? 'Remove MFA' : 'Require MFA'}
                       </button>
-                      <button style={smallButton} onClick={() => onResetFailedLogins(user.id)}>Reset Logins</button>
+
+                      <button
+                        style={smallButton}
+                        onClick={() =>
+                          confirmAction({
+                            title: 'Reset failed logins',
+                            message: `Reset failed login count for ${displayName(user)}?`,
+                            confirmLabel: 'Reset',
+                            action: () => onResetFailedLogins(user.id),
+                          })
+                        }
+                      >
+                        Reset Logins
+                      </button>
                     </div>
                   </Td>
                 </tr>
@@ -226,6 +390,16 @@ export default function UserGrid({
           </table>
         )}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingConfirm)}
+        title={pendingConfirm?.title ?? ''}
+        message={pendingConfirm?.message ?? ''}
+        confirmLabel={pendingConfirm?.confirmLabel ?? 'Confirm'}
+        danger={pendingConfirm?.danger}
+        onConfirm={runConfirmedAction}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </div>
   );
 }

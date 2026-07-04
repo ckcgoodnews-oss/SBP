@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 
+import AdminToast from './AdminToast';
 import InvitationGrid from './InvitationGrid';
 import InvitationWizard from './InvitationWizard';
 import UserAuditGrid from './UserAuditGrid';
@@ -13,6 +14,7 @@ import UserToolbar, { UserStatusFilter } from './UserToolbar';
 import { TenantUser } from './UserTypes';
 import UserWizard from './UserWizard';
 import { exportUsersCsv } from './userExport';
+import { useAdminFeedback } from './useAdminFeedback';
 import { useInvitations } from './useInvitations';
 import { useUserAudit } from './useUserAudit';
 import { useUserSessions } from './useUserSessions';
@@ -75,6 +77,8 @@ export default function AdminUsersPage() {
     refreshAudit,
   } = useUserAudit();
 
+  const { toast, notifySuccess, notifyError, clearToast } = useAdminFeedback();
+
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all');
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -105,6 +109,18 @@ export default function AdminUsersPage() {
 
   async function refreshAll() {
     await Promise.all([refresh(), refreshInvitations(), refreshSessions(), refreshAudit()]);
+    notifySuccess('Administration data refreshed.');
+  }
+
+  function runAction(action: () => Promise<unknown>, successMessage: string) {
+    void (async () => {
+      try {
+        await action();
+        notifySuccess(successMessage);
+      } catch (err) {
+        notifyError(err instanceof Error ? err.message : 'Action failed');
+      }
+    })();
   }
 
   return (
@@ -142,7 +158,10 @@ export default function AdminUsersPage() {
         onQueryChange={setQuery}
         onStatusFilterChange={setStatusFilter}
         onRefresh={() => void refreshAll()}
-        onExportCsv={() => exportUsersCsv(filteredRows)}
+        onExportCsv={() => {
+          exportUsersCsv(filteredRows);
+          notifySuccess('CSV export created.');
+        }}
       />
 
       <UserGrid
@@ -150,31 +169,35 @@ export default function AdminUsersPage() {
         users={filteredRows}
         roles={roles}
         onEdit={setProfileUser}
-        onEnable={(id) => void enableUser(id)}
-        onDisable={(id) => void disableUser(id)}
-        onLock={(id) => void lockUser(id, 'Locked from administration console')}
-        onUnlock={(id) => void unlockUser(id)}
-        onRequireMfa={(id, required) => void requireMfa(id, required)}
-        onResetFailedLogins={(id) => void resetFailedLogins(id)}
-        onBulkEnable={(selected) => void bulkEnableUsers(selected)}
-        onBulkDisable={(selected) => void bulkDisableUsers(selected)}
-        onBulkLock={(selected) => void bulkLockUsers(selected)}
-        onBulkUnlock={(selected) => void bulkUnlockUsers(selected)}
-        onBulkRequireMfa={(selected, required) => void bulkRequireMfa(selected, required)}
-        onBulkResetFailedLogins={(selected) => void bulkResetFailedLogins(selected)}
+        onEnable={(id) => runAction(() => enableUser(id), 'User enabled.')}
+        onDisable={(id) => runAction(() => disableUser(id), 'User disabled.')}
+        onLock={(id) => runAction(() => lockUser(id, 'Locked from administration console'), 'User locked.')}
+        onUnlock={(id) => runAction(() => unlockUser(id), 'User unlocked.')}
+        onRequireMfa={(id, required) =>
+          runAction(() => requireMfa(id, required), required ? 'MFA required.' : 'MFA requirement removed.')
+        }
+        onResetFailedLogins={(id) => runAction(() => resetFailedLogins(id), 'Failed login count reset.')}
+        onBulkEnable={(selected) => runAction(() => bulkEnableUsers(selected), 'Selected users enabled.')}
+        onBulkDisable={(selected) => runAction(() => bulkDisableUsers(selected), 'Selected users disabled.')}
+        onBulkLock={(selected) => runAction(() => bulkLockUsers(selected), 'Selected users locked.')}
+        onBulkUnlock={(selected) => runAction(() => bulkUnlockUsers(selected), 'Selected users unlocked.')}
+        onBulkRequireMfa={(selected, required) =>
+          runAction(() => bulkRequireMfa(selected, required), required ? 'MFA required for selected users.' : 'MFA removed for selected users.')
+        }
+        onBulkResetFailedLogins={(selected) => runAction(() => bulkResetFailedLogins(selected), 'Failed login counts reset.')}
       />
 
       <InvitationGrid
         loading={loadingInvitations || savingInvitation}
         invitations={invitations}
         roles={roles}
-        onCancel={(id) => void cancelInvitation(id)}
+        onCancel={(id) => runAction(() => cancelInvitation(id), 'Invitation cancelled.')}
       />
 
       <UserSessionsGrid
         loading={loadingSessions || savingSession}
         sessions={sessions}
-        onRevoke={(id) => void revokeSession(id)}
+        onRevoke={(id) => runAction(() => revokeSession(id), 'Session revoked.')}
       />
 
       <UserAuditGrid loading={loadingAudit} events={auditEvents} />
@@ -187,7 +210,10 @@ export default function AdminUsersPage() {
         defaultTenantId={users[0]?.tenant_id ?? invitations[0]?.tenant_id ?? sessions[0]?.tenant_id ?? auditEvents[0]?.tenant_id ?? ''}
         saving={saving}
         onClose={() => setWizardOpen(false)}
-        onCreate={createUser}
+        onCreate={async (form) => {
+          await createUser(form);
+          notifySuccess('User created.');
+        }}
         onUpdate={updateUser}
       />
 
@@ -197,7 +223,10 @@ export default function AdminUsersPage() {
         defaultTenantId={users[0]?.tenant_id ?? invitations[0]?.tenant_id ?? sessions[0]?.tenant_id ?? auditEvents[0]?.tenant_id ?? ''}
         saving={savingInvitation}
         onClose={() => setInviteOpen(false)}
-        onCreate={createInvitation}
+        onCreate={async (form) => {
+          await createInvitation(form);
+          notifySuccess('Invitation created.');
+        }}
       />
 
       <UserProfileDrawer
@@ -209,16 +238,24 @@ export default function AdminUsersPage() {
         auditEvents={auditEvents}
         saving={saving || savingSession}
         onClose={() => setProfileUser(null)}
-        onUpdate={updateUser}
-        onEnable={enableUser}
-        onDisable={disableUser}
-        onLock={lockUser}
-        onUnlock={unlockUser}
-        onRequireMfa={requireMfa}
-        onResetFailedLogins={resetFailedLogins}
-        onRevokeSession={revokeSession}
-        onPasswordReset={requestPasswordReset}
+        onUpdate={async (id, form) => {
+          await updateUser(id, form);
+          notifySuccess('User profile updated.');
+        }}
+        onEnable={(id) => enableUser(id)}
+        onDisable={(id) => disableUser(id)}
+        onLock={(id, reason) => lockUser(id, reason)}
+        onUnlock={(id) => unlockUser(id)}
+        onRequireMfa={(id, required) => requireMfa(id, required)}
+        onResetFailedLogins={(id) => resetFailedLogins(id)}
+        onRevokeSession={(id) => revokeSession(id)}
+        onPasswordReset={async (id, force, redirectTo) => {
+          await requestPasswordReset(id, force, redirectTo);
+          notifySuccess('Password reset link generated.');
+        }}
       />
+
+      <AdminToast toast={toast} onClose={clearToast} />
     </main>
   );
 }
