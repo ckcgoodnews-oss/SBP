@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 
 import AdminToast from './AdminToast';
+import AdminUsersWorkspaceTabs, { AdminUsersWorkspaceTab } from './AdminUsersWorkspaceTabs';
 import InvitationGrid from './InvitationGrid';
 import InvitationWizard from './InvitationWizard';
 import UserAuditGrid from './UserAuditGrid';
@@ -84,6 +85,7 @@ export default function AdminUsersPage() {
   const { auditEvents, loadingAudit, auditError, refreshAudit } = useUserAudit();
   const { toast, notifySuccess, notifyError, clearToast } = useAdminFeedback();
 
+  const [workspaceTab, setWorkspaceTab] = useState<AdminUsersWorkspaceTab>('users');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all');
   const [sortKey, setSortKey] = useState<UserSortKey>('full_name');
@@ -204,65 +206,90 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      <UserToolbar
-        query={query}
-        statusFilter={statusFilter}
-        pageSize={pageSize}
-        totalCount={users.length}
-        filteredCount={filteredRows.length}
-        onQueryChange={changeQuery}
-        onStatusFilterChange={changeStatus}
-        onPageSizeChange={changePageSize}
-        onRefresh={() => void refreshAll()}
-        onExportCsv={() => {
-          exportUsersCsv(sortedRows);
-          notifySuccess('CSV export created.');
-        }}
+      <AdminUsersWorkspaceTabs
+        activeTab={workspaceTab}
+        onChange={setWorkspaceTab}
+        invitationCount={invitations.length}
+        sessionCount={sessions.length}
+        auditCount={auditEvents.length}
       />
 
-      <UserGrid
-        loading={loading || saving}
-        users={pagedRows}
-        roles={roles}
-        sortKey={sortKey}
-        sortDirection={sortDirection}
-        onSortChange={changeSort}
-        onEdit={setProfileUser}
-        onEnable={(id) => runAction(() => enableUser(id), 'User enabled.')}
-        onDisable={(id) => runAction(() => disableUser(id), 'User disabled.')}
-        onLock={(id) => runAction(() => lockUser(id, 'Locked from administration console'), 'User locked.')}
-        onUnlock={(id) => runAction(() => unlockUser(id), 'User unlocked.')}
-        onRequireMfa={(id, required) => runAction(() => requireMfa(id, required), required ? 'MFA required.' : 'MFA requirement removed.')}
-        onResetFailedLogins={(id) => runAction(() => resetFailedLogins(id), 'Failed login count reset.')}
-        onBulkEnable={(selected) => runAction(() => bulkEnableUsers(selected), 'Selected users enabled.')}
-        onBulkDisable={(selected) => runAction(() => bulkDisableUsers(selected), 'Selected users disabled.')}
-        onBulkLock={(selected) => runAction(() => bulkLockUsers(selected), 'Selected users locked.')}
-        onBulkUnlock={(selected) => runAction(() => bulkUnlockUsers(selected), 'Selected users unlocked.')}
-        onBulkRequireMfa={(selected, required) => runAction(() => bulkRequireMfa(selected, required), required ? 'MFA required for selected users.' : 'MFA removed for selected users.')}
-        onBulkResetFailedLogins={(selected) => runAction(() => bulkResetFailedLogins(selected), 'Failed login counts reset.')}
-      />
+      {workspaceTab === 'users' && (
+        <>
+          <UserToolbar
+            query={query}
+            statusFilter={statusFilter}
+            pageSize={pageSize}
+            totalCount={users.length}
+            filteredCount={filteredRows.length}
+            onQueryChange={changeQuery}
+            onStatusFilterChange={changeStatus}
+            onPageSizeChange={changePageSize}
+            onRefresh={() => void refreshAll()}
+            onExportCsv={() => {
+              exportUsersCsv(sortedRows);
+              notifySuccess('CSV export created.');
+            }}
+          />
 
-      <UserPagination
-        page={page}
-        pageSize={pageSize}
-        totalCount={sortedRows.length}
-        onPageChange={setPage}
-      />
+          <UserGrid
+            loading={loading || saving}
+            users={pagedRows}
+            roles={roles}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSortChange={changeSort}
+            onEdit={setProfileUser}
+            onEnable={(id) => runAction(() => enableUser(id), 'User enabled.')}
+            onDisable={(id) => runAction(() => disableUser(id), 'User disabled.')}
+            onLock={(id) => runAction(() => lockUser(id, 'Locked from administration console'), 'User locked.')}
+            onUnlock={(id) => runAction(() => unlockUser(id), 'User unlocked.')}
+            onRequireMfa={(id, required) =>
+              runAction(() => requireMfa(id, required), required ? 'MFA required.' : 'MFA requirement removed.')
+            }
+            onResetFailedLogins={(id) => runAction(() => resetFailedLogins(id), 'Failed login count reset.')}
+            onBulkEnable={(selected) => runAction(() => bulkEnableUsers(selected), 'Selected users enabled.')}
+            onBulkDisable={(selected) => runAction(() => bulkDisableUsers(selected), 'Selected users disabled.')}
+            onBulkLock={(selected) => runAction(() => bulkLockUsers(selected), 'Selected users locked.')}
+            onBulkUnlock={(selected) => runAction(() => bulkUnlockUsers(selected), 'Selected users unlocked.')}
+            onBulkRequireMfa={(selected, required) =>
+              runAction(
+                () => bulkRequireMfa(selected, required),
+                required ? 'MFA required for selected users.' : 'MFA removed for selected users.'
+              )
+            }
+            onBulkResetFailedLogins={(selected) =>
+              runAction(() => bulkResetFailedLogins(selected), 'Failed login counts reset.')
+            }
+          />
 
-      <InvitationGrid
-        loading={loadingInvitations || savingInvitation}
-        invitations={invitations}
-        roles={roles}
-        onCancel={(id) => runAction(() => cancelInvitation(id), 'Invitation cancelled.')}
-      />
+          <UserPagination
+            page={page}
+            pageSize={pageSize}
+            totalCount={sortedRows.length}
+            onPageChange={setPage}
+          />
+        </>
+      )}
 
-      <UserSessionsGrid
-        loading={loadingSessions || savingSession}
-        sessions={sessions}
-        onRevoke={(id) => runAction(() => revokeSession(id), 'Session revoked.')}
-      />
+      {workspaceTab === 'invitations' && (
+        <InvitationGrid
+          loading={loadingInvitations || savingInvitation}
+          invitations={invitations}
+          roles={roles}
+          onCancel={(id) => runAction(() => cancelInvitation(id), 'Invitation cancelled.')}
+        />
+      )}
 
-      <UserAuditGrid loading={loadingAudit} events={auditEvents} />
+      {workspaceTab === 'sessions' && (
+        <UserSessionsGrid
+          loading={loadingSessions || savingSession}
+          sessions={sessions}
+          onRevoke={(id) => runAction(() => revokeSession(id), 'Session revoked.')}
+        />
+      )}
+
+      {workspaceTab === 'audit' && <UserAuditGrid loading={loadingAudit} events={auditEvents} />}
 
       <UserWizard
         open={wizardOpen}
