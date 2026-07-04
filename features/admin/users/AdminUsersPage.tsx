@@ -1,78 +1,10 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
-type TenantUser = {
-  id: string;
-  tenant_id: string;
-  auth_user_id?: string | null;
-  email: string;
-  full_name: string;
-  role?: string | null;
-  active?: boolean | null;
-  locked_until?: string | null;
-  lock_reason?: string | null;
-  mfa_required?: boolean | null;
-  last_login_at?: string | null;
-  department_id?: string | null;
-  title?: string | null;
-  phone?: string | null;
-  updated_at?: string | null;
-  failed_login_count?: number | null;
-};
-
-type IamRole = {
-  id: string;
-  role_key: string;
-  display_name: string;
-  description?: string | null;
-  active?: boolean | null;
-};
-
-type Department = {
-  id: string;
-  name: string;
-  description?: string | null;
-  active?: boolean | null;
-};
-
-type ApiResponse<T> = {
-  ok?: boolean;
-  data?: T;
-  error?: string;
-};
-
-const emptyForm = {
-  tenant_id: '',
-  email: '',
-  full_name: '',
-  role: 'staff',
-  title: '',
-  phone: '',
-  department_id: '',
-  mfa_required: false,
-  active: true,
-};
-
-type UserForm = typeof emptyForm;
-
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  const json = (await response.json()) as ApiResponse<T>;
-
-  if (!response.ok || json.ok === false) {
-    throw new Error(json.error || `Request failed: ${response.status}`);
-  }
-
-  return json.data as T;
-}
+import UserWizard from './UserWizard';
+import { TenantUser } from './UserTypes';
+import { useUsers } from './useUsers';
 
 function isLocked(user: TenantUser) {
   if (!user.locked_until) return false;
@@ -104,47 +36,33 @@ function badge(label: string, tone: 'green' | 'red' | 'yellow' | 'gray' | 'blue'
 }
 
 export default function AdminUsersPage() {
-  const [rows, setRows] = useState<TenantUser[]>([]);
-  const [roles, setRoles] = useState<IamRole[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const {
+    loading,
+    saving,
+    error,
+    users,
+    roles,
+    departments,
+    refresh,
+    createUser,
+    updateUser,
+    enableUser,
+    disableUser,
+    lockUser,
+    unlockUser,
+    requireMfa,
+    resetFailedLogins,
+  } = useUsers();
+
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'locked' | 'mfa'>('all');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<TenantUser | null>(null);
-  const [form, setForm] = useState<UserForm>(emptyForm);
-
-  async function load() {
-    setLoading(true);
-    setError('');
-
-    try {
-      const [usersData, rolesData, departmentsData] = await Promise.all([
-        api<TenantUser[]>('/api/admin/users'),
-        api<IamRole[]>('/api/admin/roles'),
-        api<Department[]>('/api/admin/departments'),
-      ]);
-
-      setRows(usersData ?? []);
-      setRoles((rolesData ?? []).filter((role) => role.active !== false));
-      setDepartments((departmentsData ?? []).filter((department) => department.active !== false));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load user administration data');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void load();
-  }, []);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
 
   const filteredRows = useMemo(() => {
     const text = query.trim().toLowerCase();
 
-    return rows.filter((user) => {
+    return users.filter((user) => {
       const matchesText =
         !text ||
         user.email?.toLowerCase().includes(text) ||
@@ -161,92 +79,26 @@ export default function AdminUsersPage() {
 
       return matchesText && matchesStatus;
     });
-  }, [rows, query, statusFilter]);
-
-  function openCreate() {
-    setEditing(null);
-    setForm({
-      ...emptyForm,
-      tenant_id: rows[0]?.tenant_id ?? '',
-      role: roles[0]?.role_key ?? 'staff',
-    });
-    setDrawerOpen(true);
-  }
-
-  function openEdit(user: TenantUser) {
-    setEditing(user);
-    setForm({
-      tenant_id: user.tenant_id ?? '',
-      email: user.email ?? '',
-      full_name: user.full_name ?? '',
-      role: user.role ?? roles[0]?.role_key ?? 'staff',
-      title: user.title ?? '',
-      phone: user.phone ?? '',
-      department_id: user.department_id ?? '',
-      mfa_required: Boolean(user.mfa_required),
-      active: Boolean(user.active),
-    });
-    setDrawerOpen(true);
-  }
-
-  function updateForm<K extends keyof UserForm>(key: K, value: UserForm[K]) {
-    setForm((current) => ({ ...current, [key]: value }));
-  }
-
-  async function submitForm(event: React.FormEvent) {
-    event.preventDefault();
-    setSaving(true);
-    setError('');
-
-    try {
-      const payload = {
-        ...form,
-        title: form.title || null,
-        phone: form.phone || null,
-        department_id: form.department_id || null,
-      };
-
-      if (editing) {
-        await api<TenantUser>('/api/admin/users', {
-          method: 'PATCH',
-          body: JSON.stringify({ id: editing.id, ...payload }),
-        });
-      } else {
-        await api<TenantUser>('/api/admin/users', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-      }
-
-      setDrawerOpen(false);
-      setEditing(null);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save user');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function runAction(path: string, body: Record<string, unknown>) {
-    setSaving(true);
-    setError('');
-    try {
-      await api<TenantUser>(path, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Action failed');
-    } finally {
-      setSaving(false);
-    }
-  }
+  }, [users, query, statusFilter]);
 
   function getRoleDisplayName(roleKey?: string | null) {
     if (!roleKey) return '—';
     return roles.find((role) => role.role_key === roleKey)?.display_name ?? roleKey;
+  }
+
+  function openCreate() {
+    setEditingUser(null);
+    setWizardOpen(true);
+  }
+
+  function openEdit(user: TenantUser) {
+    setEditingUser(user);
+    setWizardOpen(true);
+  }
+
+  function closeWizard() {
+    setWizardOpen(false);
+    setEditingUser(null);
   }
 
   return (
@@ -265,10 +117,10 @@ export default function AdminUsersPage() {
       </div>
 
       <section style={statsGrid}>
-        <Stat label="Total Users" value={rows.length} />
-        <Stat label="Active" value={rows.filter((u) => u.active).length} />
-        <Stat label="Locked" value={rows.filter(isLocked).length} />
-        <Stat label="MFA Required" value={rows.filter((u) => u.mfa_required).length} />
+        <Stat label="Total Users" value={users.length} />
+        <Stat label="Active" value={users.filter((u) => u.active).length} />
+        <Stat label="Locked" value={users.filter(isLocked).length} />
+        <Stat label="MFA Required" value={users.filter((u) => u.mfa_required).length} />
       </section>
 
       {error && (
@@ -297,7 +149,7 @@ export default function AdminUsersPage() {
           <option value="mfa">MFA required</option>
         </select>
 
-        <button onClick={() => void load()} style={secondaryButton}>
+        <button onClick={() => void refresh()} style={secondaryButton}>
           Refresh
         </button>
       </section>
@@ -348,46 +200,33 @@ export default function AdminUsersPage() {
                       </button>
 
                       {user.active ? (
-                        <button style={smallButton} onClick={() => void runAction('/api/admin/users/disable', { id: user.id })}>
+                        <button style={smallButton} onClick={() => void disableUser(user.id)}>
                           Disable
                         </button>
                       ) : (
-                        <button style={smallButton} onClick={() => void runAction('/api/admin/users/enable', { id: user.id })}>
+                        <button style={smallButton} onClick={() => void enableUser(user.id)}>
                           Enable
                         </button>
                       )}
 
                       {isLocked(user) ? (
-                        <button style={smallButton} onClick={() => void runAction('/api/admin/users/unlock', { id: user.id })}>
+                        <button style={smallButton} onClick={() => void unlockUser(user.id)}>
                           Unlock
                         </button>
                       ) : (
                         <button
                           style={smallButton}
-                          onClick={() =>
-                            void runAction('/api/admin/users/lock', {
-                              id: user.id,
-                              reason: 'Locked from administration console',
-                            })
-                          }
+                          onClick={() => void lockUser(user.id, 'Locked from administration console')}
                         >
                           Lock
                         </button>
                       )}
 
-                      <button
-                        style={smallButton}
-                        onClick={() =>
-                          void runAction('/api/admin/users/require-mfa', {
-                            id: user.id,
-                            required: !user.mfa_required,
-                          })
-                        }
-                      >
+                      <button style={smallButton} onClick={() => void requireMfa(user.id, !user.mfa_required)}>
                         {user.mfa_required ? 'Remove MFA' : 'Require MFA'}
                       </button>
 
-                      <button style={smallButton} onClick={() => void runAction('/api/admin/users/reset-failed-logins', { id: user.id })}>
+                      <button style={smallButton} onClick={() => void resetFailedLogins(user.id)}>
                         Reset Logins
                       </button>
                     </div>
@@ -407,102 +246,18 @@ export default function AdminUsersPage() {
         )}
       </div>
 
-      {drawerOpen && (
-        <div style={drawerBackdrop}>
-          <aside style={drawer}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2>{editing ? 'Edit User' : 'Create User'}</h2>
-              <button style={smallButton} onClick={() => setDrawerOpen(false)}>
-                Close
-              </button>
-            </div>
-
-            <form onSubmit={submitForm} style={{ display: 'grid', gap: 12 }}>
-              <Field label="Tenant ID">
-                <input
-                  value={form.tenant_id}
-                  onChange={(event) => updateForm('tenant_id', event.target.value)}
-                  required
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Email">
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(event) => updateForm('email', event.target.value)}
-                  required
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Full Name">
-                <input
-                  value={form.full_name}
-                  onChange={(event) => updateForm('full_name', event.target.value)}
-                  required
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Role">
-                <select value={form.role} onChange={(event) => updateForm('role', event.target.value)} required style={input}>
-                  <option value="">Select role</option>
-                  {roles.map((role) => (
-                    <option key={role.id} value={role.role_key}>
-                      {role.display_name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Title">
-                <input value={form.title} onChange={(event) => updateForm('title', event.target.value)} style={input} />
-              </Field>
-
-              <Field label="Phone">
-                <input value={form.phone} onChange={(event) => updateForm('phone', event.target.value)} style={input} />
-              </Field>
-
-              <Field label="Department">
-                <select value={form.department_id} onChange={(event) => updateForm('department_id', event.target.value)} style={input}>
-                  <option value="">No department</option>
-                  {departments.map((department) => (
-                    <option key={department.id} value={department.id}>
-                      {department.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input type="checkbox" checked={form.active} onChange={(event) => updateForm('active', event.target.checked)} />
-                Active
-              </label>
-
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input type="checkbox" checked={form.mfa_required} onChange={(event) => updateForm('mfa_required', event.target.checked)} />
-                Require MFA
-              </label>
-
-              <button disabled={saving} style={primaryButton}>
-                {saving ? 'Saving...' : editing ? 'Update User' : 'Create User'}
-              </button>
-            </form>
-          </aside>
-        </div>
-      )}
+      <UserWizard
+        open={wizardOpen}
+        editingUser={editingUser}
+        roles={roles}
+        departments={departments}
+        defaultTenantId={users[0]?.tenant_id ?? ''}
+        saving={saving}
+        onClose={closeWizard}
+        onCreate={createUser}
+        onUpdate={updateUser}
+      />
     </main>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label style={{ display: 'grid', gap: 4 }}>
-      <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
-      {children}
-    </label>
   );
 }
 
@@ -609,23 +364,4 @@ const smallButton: React.CSSProperties = {
   padding: '5px 8px',
   fontSize: 12,
   cursor: 'pointer',
-};
-
-const drawerBackdrop: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(15, 23, 42, 0.35)',
-  display: 'flex',
-  justifyContent: 'flex-end',
-  zIndex: 50,
-};
-
-const drawer: React.CSSProperties = {
-  width: 440,
-  maxWidth: '100%',
-  background: 'white',
-  height: '100%',
-  padding: 24,
-  boxShadow: '-10px 0 30px rgba(15, 23, 42, 0.2)',
-  overflow: 'auto',
 };
