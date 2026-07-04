@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import AdminEmptyState from './AdminEmptyState';
+import AdminLoadingState from './AdminLoadingState';
 import ConfirmDialog from './ConfirmDialog';
 import { IamRole, TenantUser } from './UserTypes';
 
@@ -211,7 +213,12 @@ export default function UserGrid({
 
       <div style={tableWrap}>
         {loading ? (
-          <div style={{ padding: 24 }}>Loading users...</div>
+          <AdminLoadingState label="Loading users..." />
+        ) : users.length === 0 ? (
+          <AdminEmptyState
+            title="No users found"
+            message="No users match the current search or filter. Try clearing filters or creating a new user."
+          />
         ) : (
           <table style={table}>
             <thead>
@@ -335,14 +342,6 @@ export default function UserGrid({
                   </Td>
                 </tr>
               ))}
-
-              {users.length === 0 && (
-                <tr>
-                  <td colSpan={10} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
-                    No users found.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         )}

@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+import AdminEmptyState from './AdminEmptyState';
+import AdminLoadingState from './AdminLoadingState';
+import AdminSectionHeader from './AdminSectionHeader';
 import { UserAuditEvent } from './useUserAudit';
 
 type UserAuditGridProps = {
@@ -20,37 +23,31 @@ function metadataPreview(metadata?: Record<string, unknown> | null) {
   if (!metadata) return '—';
 
   const entries = Object.entries(metadata).slice(0, 3);
-
   if (entries.length === 0) return '—';
 
-  return entries
-    .map(([key, value]) => `${key}: ${String(value)}`)
-    .join(', ');
+  return entries.map(([key, value]) => `${key}: ${String(value)}`).join(', ');
 }
 
 function badge(label: string) {
-  return (
-    <span style={badgeStyle}>
-      {label}
-    </span>
-  );
+  return <span style={badgeStyle}>{label}</span>;
 }
 
 export default function UserAuditGrid({ loading, events }: UserAuditGridProps) {
   return (
     <section style={{ marginTop: 28 }}>
-      <div style={header}>
-        <div>
-          <h2 style={{ margin: 0 }}>User Audit History</h2>
-          <p style={{ marginTop: 6, color: '#64748b' }}>
-            Review recent user administration and security events.
-          </p>
-        </div>
-      </div>
+      <AdminSectionHeader
+        title="User Audit History"
+        description="Review recent user administration and security events."
+      />
 
       <div style={tableWrap}>
         {loading ? (
-          <div style={{ padding: 24 }}>Loading audit history...</div>
+          <AdminLoadingState label="Loading audit history..." />
+        ) : events.length === 0 ? (
+          <AdminEmptyState
+            title="No audit events found"
+            message="User security, invitation, session, and profile events will appear here after administrative activity occurs."
+          />
         ) : (
           <table style={table}>
             <thead>
@@ -83,14 +80,6 @@ export default function UserAuditGrid({ loading, events }: UserAuditGridProps) {
                   </Td>
                 </tr>
               ))}
-
-              {events.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
-                    No audit events found.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         )}
@@ -106,14 +95,6 @@ function Th({ children }: { children: React.ReactNode }) {
 function Td({ children }: { children: React.ReactNode }) {
   return <td style={td}>{children}</td>;
 }
-
-const header: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 16,
-  alignItems: 'center',
-  marginBottom: 12,
-};
 
 const tableWrap: React.CSSProperties = {
   border: '1px solid #e2e8f0',
