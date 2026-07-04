@@ -77,39 +77,45 @@ export default function UserProfileDrawer({
 
   if (!open || !user) return null;
 
-  const currentUser = user;
-
   function updateForm<K extends keyof UserForm>(key: K, value: UserForm[K]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  async function save() {
-    if (!form.email.includes('@')) {
-      setLocalError('A valid email is required.');
-      return;
-    }
 
-    if (!form.full_name.trim()) {
-      setLocalError('Full name is required.');
-      return;
-    }
 
-    setLocalError('');
-    await onUpdate(currentUser.id, form);
+async function save() {
+  if (!user) return;
+
+  if (!form.email.includes('@')) {
+    setLocalError('A valid email is required.');
+    return;
   }
 
-  async function saveSecurity() {
-    await onRequireMfa(currentUser.id, form.mfa_required);
-    await save();
+  if (!form.full_name.trim()) {
+    setLocalError('Full name is required.');
+    return;
   }
+
+  setLocalError('');
+  await onUpdate(user.id, form);
+}
+
+async function saveSecurity() {
+  if (!user) return;
+
+  await onRequireMfa(user.id, form.mfa_required);
+  await save();
+}
+
+
 
   return (
     <div style={backdrop}>
       <aside style={drawer}>
         <div style={header}>
           <div>
-            <h2 style={{ margin: 0 }}>{currentUser.full_name || currentUser.email}</h2>
-            <p style={{ margin: '6px 0 0', color: '#64748b' }}>{currentUser.email}</p>
+            <h2 style={{ margin: 0 }}>{user.full_name || user.email}</h2>
+            <p style={{ margin: '6px 0 0', color: '#64748b' }}>{user.email}</p>
           </div>
 
           <button type="button" style={smallButton} onClick={onClose}>
@@ -123,7 +129,7 @@ export default function UserProfileDrawer({
 
         {activeTab === 'overview' && (
           <UserOverviewTab
-            user={currentUser}
+            user={user}
             form={form}
             roles={roles}
             departments={departments}
@@ -135,32 +141,28 @@ export default function UserProfileDrawer({
 
         {activeTab === 'security' && (
           <UserSecurityTab
-            user={currentUser}
+            user={user}
             form={form}
             saving={saving}
             onChange={updateForm}
             onSave={() => void saveSecurity()}
-            onEnable={() => void onEnable(currentUser.id)}
-            onDisable={() => void onDisable(currentUser.id)}
-            onLock={() => void onLock(currentUser.id, 'Locked from user profile drawer')}
-            onUnlock={() => void onUnlock(currentUser.id)}
-            onResetFailedLogins={() => void onResetFailedLogins(currentUser.id)}
+            onEnable={() => void onEnable(user.id)}
+            onDisable={() => void onDisable(user.id)}
+            onLock={() => void onLock(user.id, 'Locked from user profile drawer')}
+            onUnlock={() => void onUnlock(user.id)}
+            onResetFailedLogins={() => void onResetFailedLogins(user.id)}
           />
         )}
 
-        {activeTab === 'roles' && <UserRolesTab user={currentUser} roles={roles} />}
+        {activeTab === 'roles' && <UserRolesTab user={user} roles={roles} />}
 
         {activeTab === 'sessions' && (
-          <UserSessionsTab
-            user={currentUser}
-            sessions={sessions}
-            onRevoke={(id: string) => void onRevokeSession(id)}
-          />
+          <UserSessionsTab user={user} sessions={sessions} onRevoke={(id) => void onRevokeSession(id)} />
         )}
 
-        {activeTab === 'audit' && <UserAuditTab user={currentUser} events={auditEvents} />}
+        {activeTab === 'audit' && <UserAuditTab user={user} events={auditEvents} />}
 
-        {activeTab === 'apiKeys' && <UserApiKeysTab user={currentUser} />}
+        {activeTab === 'apiKeys' && <UserApiKeysTab user={user} />}
       </aside>
     </div>
   );

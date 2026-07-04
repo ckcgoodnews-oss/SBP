@@ -77,8 +77,36 @@ function Td({ children }: { children: React.ReactNode }) {
 }
 
 const section: React.CSSProperties = { marginTop: 18 };
-const tableWrap: React.CSSProperties = { border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'auto', background: 'white' };
+
+const tableWrap: React.CSSProperties = {
+  border: '1px solid #e2e8f0',
+  borderRadius: 12,
+  overflow: 'auto',
+  background: 'white',
+};
+
 const table: React.CSSProperties = { width: '100%', borderCollapse: 'collapse' };
-const th: React.CSSProperties = { textAlign: 'left', padding: '10px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 13 };
-const td: React.CSSProperties = { padding: '10px', borderBottom: '1px solid #f1f5f9', fontSize: 14 };
-const smallButton: React.CSSProperties = { background: 'white', color: '#0f172a', border: '1px solid #cbd5e1', borderRadius: 6, padding: '5px 8px', fontSize: 12, cursor: 'pointer' };
+
+const th: React.CSSProperties = {
+  textAlign: 'left',
+  padding: '10px',
+  borderBottom: '1px solid #e2e8f0',
+  background: '#f8fafc',
+  fontSize: 13,
+};
+
+const td: React.CSSProperties = {
+  padding: '10px',
+  borderBottom: '1px solid #f1f5f9',
+  fontSize: 14,
+};
+
+const smallButton: React.CSSProperties = {
+  background: 'white',
+  color: '#0f172a',
+  border: '1px solid #cbd5e1',
+  borderRadius: 6,
+  padding: '5px 8px',
+  fontSize: 12,
+  cursor: 'pointer',
+};

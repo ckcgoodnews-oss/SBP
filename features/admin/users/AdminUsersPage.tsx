@@ -6,6 +6,7 @@ import InvitationGrid from './InvitationGrid';
 import InvitationWizard from './InvitationWizard';
 import UserAuditGrid from './UserAuditGrid';
 import UserGrid from './UserGrid';
+import UserProfileDrawer from './UserProfileDrawer';
 import UserSessionsGrid from './UserSessionsGrid';
 import UserStats from './UserStats';
 import UserToolbar, { UserStatusFilter } from './UserToolbar';
@@ -77,7 +78,7 @@ export default function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
+  const [profileUser, setProfileUser] = useState<TenantUser | null>(null);
 
   const filteredRows = useMemo(() => {
     const text = query.trim().toLowerCase();
@@ -101,28 +102,8 @@ export default function AdminUsersPage() {
     });
   }, [users, query, statusFilter]);
 
-  function openCreate() {
-    setEditingUser(null);
-    setWizardOpen(true);
-  }
-
-  function openEdit(user: TenantUser) {
-    setEditingUser(user);
-    setWizardOpen(true);
-  }
-
-  function closeWizard() {
-    setWizardOpen(false);
-    setEditingUser(null);
-  }
-
   async function refreshAll() {
-    await Promise.all([
-      refresh(),
-      refreshInvitations(),
-      refreshSessions(),
-      refreshAudit(),
-    ]);
+    await Promise.all([refresh(), refreshInvitations(), refreshSessions(), refreshAudit()]);
   }
 
   return (
@@ -140,7 +121,7 @@ export default function AdminUsersPage() {
             Invite User
           </button>
 
-          <button onClick={openCreate} style={primaryButton}>
+          <button onClick={() => setWizardOpen(true)} style={primaryButton}>
             Create User
           </button>
         </div>
@@ -167,7 +148,7 @@ export default function AdminUsersPage() {
         loading={loading || saving}
         users={filteredRows}
         roles={roles}
-        onEdit={openEdit}
+        onEdit={setProfileUser}
         onEnable={(id) => void enableUser(id)}
         onDisable={(id) => void disableUser(id)}
         onLock={(id) => void lockUser(id, 'Locked from administration console')}
@@ -195,19 +176,16 @@ export default function AdminUsersPage() {
         onRevoke={(id) => void revokeSession(id)}
       />
 
-      <UserAuditGrid
-        loading={loadingAudit}
-        events={auditEvents}
-      />
+      <UserAuditGrid loading={loadingAudit} events={auditEvents} />
 
       <UserWizard
         open={wizardOpen}
-        editingUser={editingUser}
+        editingUser={null}
         roles={roles}
         departments={departments}
         defaultTenantId={users[0]?.tenant_id ?? invitations[0]?.tenant_id ?? sessions[0]?.tenant_id ?? auditEvents[0]?.tenant_id ?? ''}
         saving={saving}
-        onClose={closeWizard}
+        onClose={() => setWizardOpen(false)}
         onCreate={createUser}
         onUpdate={updateUser}
       />
@@ -219,6 +197,25 @@ export default function AdminUsersPage() {
         saving={savingInvitation}
         onClose={() => setInviteOpen(false)}
         onCreate={createInvitation}
+      />
+
+      <UserProfileDrawer
+        open={Boolean(profileUser)}
+        user={profileUser}
+        roles={roles}
+        departments={departments}
+        sessions={sessions}
+        auditEvents={auditEvents}
+        saving={saving || savingSession}
+        onClose={() => setProfileUser(null)}
+        onUpdate={updateUser}
+        onEnable={enableUser}
+        onDisable={disableUser}
+        onLock={lockUser}
+        onUnlock={unlockUser}
+        onRequireMfa={requireMfa}
+        onResetFailedLogins={resetFailedLogins}
+        onRevokeSession={revokeSession}
       />
     </main>
   );
