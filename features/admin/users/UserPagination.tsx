@@ -20,49 +20,29 @@ export default function UserPagination({
   const end = Math.min(totalCount, page * pageSize);
 
   return (
-    <section style={wrap}>
+    <section style={wrap} aria-label="User table pagination">
       <div style={{ color: '#64748b', fontSize: 13 }}>
         Showing {start}-{end} of {totalCount}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <button
-          type="button"
-          style={button}
-          disabled={page <= 1}
-          onClick={() => onPageChange(1)}
-        >
+      <div style={buttonGroup}>
+        <button type="button" style={button} disabled={page <= 1} onClick={() => onPageChange(1)}>
           First
         </button>
 
-        <button
-          type="button"
-          style={button}
-          disabled={page <= 1}
-          onClick={() => onPageChange(page - 1)}
-        >
+        <button type="button" style={button} disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
           Previous
         </button>
 
-        <span style={{ fontSize: 13 }}>
+        <span style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
           Page {page} of {totalPages}
         </span>
 
-        <button
-          type="button"
-          style={button}
-          disabled={page >= totalPages}
-          onClick={() => onPageChange(page + 1)}
-        >
+        <button type="button" style={button} disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
           Next
         </button>
 
-        <button
-          type="button"
-          style={button}
-          disabled={page >= totalPages}
-          onClick={() => onPageChange(totalPages)}
-        >
+        <button type="button" style={button} disabled={page >= totalPages} onClick={() => onPageChange(totalPages)}>
           Last
         </button>
       </div>
@@ -78,6 +58,13 @@ const wrap: React.CSSProperties = {
   flexWrap: 'wrap',
   marginTop: 12,
   marginBottom: 24,
+};
+
+const buttonGroup: React.CSSProperties = {
+  display: 'flex',
+  gap: 8,
+  alignItems: 'center',
+  flexWrap: 'wrap',
 };
 
 const button: React.CSSProperties = {

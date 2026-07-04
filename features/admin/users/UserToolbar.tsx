@@ -30,15 +30,21 @@ export default function UserToolbar({
   onExportCsv,
 }: UserToolbarProps) {
   return (
-    <section style={toolbar}>
+    <section style={toolbar} aria-label="User search and table controls">
       <input
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
         placeholder="Search users by name, email, role, or title..."
         style={input}
+        aria-label="Search users"
       />
 
-      <select value={statusFilter} onChange={(event) => onStatusFilterChange(event.target.value as UserStatusFilter)} style={select}>
+      <select
+        value={statusFilter}
+        onChange={(event) => onStatusFilterChange(event.target.value as UserStatusFilter)}
+        style={select}
+        aria-label="Filter by user status"
+      >
         <option value="all">All users</option>
         <option value="active">Active</option>
         <option value="inactive">Inactive</option>
@@ -46,7 +52,12 @@ export default function UserToolbar({
         <option value="mfa">MFA required</option>
       </select>
 
-      <select value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))} style={select}>
+      <select
+        value={pageSize}
+        onChange={(event) => onPageSizeChange(Number(event.target.value))}
+        style={select}
+        aria-label="Rows per page"
+      >
         <option value={10}>10 / page</option>
         <option value={25}>25 / page</option>
         <option value={50}>50 / page</option>
@@ -57,11 +68,11 @@ export default function UserToolbar({
         {filteredCount} of {totalCount}
       </span>
 
-      <button onClick={onRefresh} style={secondaryButton}>
+      <button type="button" onClick={onRefresh} style={secondaryButton}>
         Refresh
       </button>
 
-      <button onClick={onExportCsv} style={secondaryButton}>
+      <button type="button" onClick={onExportCsv} style={secondaryButton}>
         Export CSV
       </button>
     </section>
@@ -77,7 +88,8 @@ const toolbar: React.CSSProperties = {
 };
 
 const input: React.CSSProperties = {
-  flex: '1 1 280px',
+  flex: '1 1 260px',
+  minWidth: 220,
   padding: '9px 10px',
   border: '1px solid #cbd5e1',
   borderRadius: 8,
@@ -87,6 +99,7 @@ const select: React.CSSProperties = {
   padding: '9px 10px',
   border: '1px solid #cbd5e1',
   borderRadius: 8,
+  minWidth: 130,
 };
 
 const countText: React.CSSProperties = {

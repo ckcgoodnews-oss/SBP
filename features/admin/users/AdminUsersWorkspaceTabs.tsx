@@ -34,7 +34,7 @@ export default function AdminUsersWorkspaceTabs({
   }
 
   return (
-    <section style={wrap}>
+    <section style={wrap} aria-label="User management workspace sections">
       {tabs.map((tab) => {
         const count = countFor(tab.key);
         const active = activeTab === tab.key;
@@ -44,6 +44,7 @@ export default function AdminUsersWorkspaceTabs({
             key={tab.key}
             type="button"
             onClick={() => onChange(tab.key)}
+            aria-pressed={active}
             style={{
               ...tabButton,
               background: active ? '#0f172a' : 'white',
@@ -65,6 +66,8 @@ const wrap: React.CSSProperties = {
   gap: 8,
   flexWrap: 'wrap',
   marginBottom: 16,
+  overflowX: 'auto',
+  paddingBottom: 2,
 };
 
 const tabButton: React.CSSProperties = {
@@ -75,6 +78,7 @@ const tabButton: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 8,
+  minHeight: 38,
 };
 
 const badge: React.CSSProperties = {
