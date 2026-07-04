@@ -31,7 +31,7 @@ type Props = {
   onRequireMfa: (id: string, required: boolean) => Promise<unknown>;
   onResetFailedLogins: (id: string) => Promise<unknown>;
   onRevokeSession: (id: string) => Promise<unknown>;
-  onPasswordReset: (id: string, forcePasswordChange: boolean) => Promise<unknown>;
+  onPasswordReset: (id: string, forcePasswordChange: boolean, redirectTo: string) => Promise<unknown>;
 };
 
 function buildForm(user: TenantUser | null): UserForm {

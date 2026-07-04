@@ -1,5 +1,5 @@
 import { fail, ok } from '@/lib/enterprise-admin/api-response';
-import { createServerAdminSupabaseClient } from '@/lib/supabase/server-admin';
+import { PasswordResetService } from '@/lib/services/admin/PasswordResetService';
 
 export async function POST(request: Request) {
   try {
@@ -9,40 +9,14 @@ export async function POST(request: Request) {
       return fail(new Error('Missing userId'), 400);
     }
 
-    const supabase = createServerAdminSupabaseClient();
-
-    const { data: user, error: userError } = await supabase
-      .from('tenant_users')
-      .select('*')
-      .eq('id', body.userId)
-      .single();
-
-    if (userError) throw userError;
-    if (!user) return fail(new Error('User not found'), 404);
-
-    const forcePasswordChange = Boolean(body.forcePasswordChange);
-
-    await supabase.from('audit_logs').insert({
-      tenant_id: user.tenant_id,
-      actor_email: body.actorEmail || 'admin@example.com',
-      action: 'password_reset_requested',
-      entity_type: 'tenant_user',
-      entity_id: user.id,
-      target_user_id: user.id,
-      target_email: user.email,
-      metadata: {
-        force_password_change: forcePasswordChange,
-        delivery_method: 'email',
-      },
+    const result = await PasswordResetService.requestPasswordReset({
+      userId: body.userId,
+      forcePasswordChange: Boolean(body.forcePasswordChange),
+      actorEmail: body.actorEmail || 'admin@example.com',
+      redirectTo: body.redirectTo || null,
     });
 
-    return ok({
-      user_id: user.id,
-      email: user.email,
-      force_password_change: forcePasswordChange,
-      status: 'reset_requested',
-      message: 'Password reset request recorded. Email delivery integration will be connected next.',
-    });
+    return ok(result);
   } catch (error) {
     return fail(error);
   }

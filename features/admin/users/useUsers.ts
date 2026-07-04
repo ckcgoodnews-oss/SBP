@@ -154,7 +154,11 @@ export function useUsers() {
     }
   }
 
-  async function requestPasswordReset(userId: string, forcePasswordChange: boolean) {
+  async function requestPasswordReset(
+    userId: string,
+    forcePasswordChange: boolean,
+    redirectTo: string
+  ) {
     setSaving(true);
     setError('');
 
@@ -164,6 +168,7 @@ export function useUsers() {
         body: JSON.stringify({
           userId,
           forcePasswordChange,
+          redirectTo,
           actorEmail: 'admin@example.com',
         }),
       });

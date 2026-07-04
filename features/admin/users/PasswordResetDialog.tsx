@@ -8,7 +8,7 @@ type Props = {
   user: TenantUser | null;
   saving: boolean;
   onClose: () => void;
-  onSubmit: (userId: string, forcePasswordChange: boolean) => Promise<unknown>;
+  onSubmit: (userId: string, forcePasswordChange: boolean, redirectTo: string) => Promise<unknown>;
 };
 
 export default function PasswordResetDialog({
@@ -19,12 +19,18 @@ export default function PasswordResetDialog({
   onSubmit,
 }: Props) {
   const [forcePasswordChange, setForcePasswordChange] = useState(true);
+  const [redirectTo, setRedirectTo] = useState('');
   const [localError, setLocalError] = useState('');
 
   useEffect(() => {
     if (!open) return;
+
     setForcePasswordChange(true);
     setLocalError('');
+
+    if (typeof window !== 'undefined') {
+      setRedirectTo(`${window.location.origin}/login`);
+    }
   }, [open]);
 
   if (!open || !user) return null;
@@ -37,8 +43,13 @@ export default function PasswordResetDialog({
       return;
     }
 
+    if (!redirectTo.trim()) {
+      setLocalError('Redirect URL is required.');
+      return;
+    }
+
     setLocalError('');
-    await onSubmit(activeUser.id, forcePasswordChange);
+    await onSubmit(activeUser.id, forcePasswordChange, redirectTo.trim());
     onClose();
   }
 
@@ -49,7 +60,7 @@ export default function PasswordResetDialog({
           <div>
             <h2 style={{ margin: 0 }}>Password Reset</h2>
             <p style={{ margin: '6px 0 0', color: '#64748b' }}>
-              Send a password reset request for this user.
+              Generate a Supabase recovery link for this user.
             </p>
           </div>
 
@@ -66,6 +77,18 @@ export default function PasswordResetDialog({
           <div style={{ color: '#64748b', fontSize: 13 }}>{activeUser.email}</div>
         </div>
 
+        <label style={field}>
+          <span style={label}>Redirect URL</span>
+          <input
+            value={redirectTo}
+            onChange={(event) => setRedirectTo(event.target.value)}
+            style={input}
+          />
+          <span style={hint}>
+            This should point to your app page that handles password recovery.
+          </span>
+        </label>
+
         <label style={checkRow}>
           <input
             type="checkbox"
@@ -76,7 +99,7 @@ export default function PasswordResetDialog({
             <strong>Force password change at next login</strong>
             <br />
             <span style={{ color: '#64748b', fontSize: 13 }}>
-              Recommended when resetting access for a locked, compromised, or inactive account.
+              Recorded in audit metadata now; enforcement hook will be wired in a later login-policy sprint.
             </span>
           </span>
         </label>
@@ -87,7 +110,7 @@ export default function PasswordResetDialog({
           </button>
 
           <button type="button" disabled={saving} style={primaryButton} onClick={() => void submit()}>
-            {saving ? 'Sending...' : 'Send Reset Email'}
+            {saving ? 'Generating...' : 'Generate Reset Link'}
           </button>
         </footer>
       </aside>
@@ -105,7 +128,7 @@ const backdrop: React.CSSProperties = {
 };
 
 const dialog: React.CSSProperties = {
-  width: 460,
+  width: 500,
   maxWidth: 'calc(100% - 32px)',
   background: 'white',
   borderRadius: 14,
@@ -127,6 +150,29 @@ const card: React.CSSProperties = {
   background: '#f8fafc',
   marginTop: 18,
   marginBottom: 14,
+};
+
+const field: React.CSSProperties = {
+  display: 'grid',
+  gap: 5,
+  marginBottom: 14,
+};
+
+const label: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 600,
+};
+
+const hint: React.CSSProperties = {
+  color: '#64748b',
+  fontSize: 12,
+};
+
+const input: React.CSSProperties = {
+  width: '100%',
+  padding: '9px 10px',
+  border: '1px solid #cbd5e1',
+  borderRadius: 8,
 };
 
 const checkRow: React.CSSProperties = {
