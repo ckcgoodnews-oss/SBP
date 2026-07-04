@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { IamRole, TenantUser } from './UserTypes';
 
 type UserGridProps = {
@@ -14,6 +14,12 @@ type UserGridProps = {
   onUnlock: (id: string) => void;
   onRequireMfa: (id: string, required: boolean) => void;
   onResetFailedLogins: (id: string) => void;
+  onBulkEnable: (users: TenantUser[]) => void;
+  onBulkDisable: (users: TenantUser[]) => void;
+  onBulkLock: (users: TenantUser[]) => void;
+  onBulkUnlock: (users: TenantUser[]) => void;
+  onBulkRequireMfa: (users: TenantUser[], required: boolean) => void;
+  onBulkResetFailedLogins: (users: TenantUser[]) => void;
 };
 
 function isLocked(user: TenantUser) {
@@ -48,80 +54,178 @@ export default function UserGrid({
   onUnlock,
   onRequireMfa,
   onResetFailedLogins,
+  onBulkEnable,
+  onBulkDisable,
+  onBulkLock,
+  onBulkUnlock,
+  onBulkRequireMfa,
+  onBulkResetFailedLogins,
 }: UserGridProps) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const selectedUsers = useMemo(
+    () => users.filter((user) => selectedIds.has(user.id)),
+    [users, selectedIds]
+  );
+
+  const allVisibleSelected = users.length > 0 && users.every((user) => selectedIds.has(user.id));
+
   function getRoleDisplayName(roleKey?: string | null) {
     if (!roleKey) return '—';
     return roles.find((role) => role.role_key === roleKey)?.display_name ?? roleKey;
   }
 
-  return (
-    <div style={tableWrap}>
-      {loading ? (
-        <div style={{ padding: 24 }}>Loading users...</div>
-      ) : (
-        <table style={table}>
-          <thead>
-            <tr>
-              <Th>User</Th>
-              <Th>Role</Th>
-              <Th>Title</Th>
-              <Th>Status</Th>
-              <Th>Security</Th>
-              <Th>Failed Logins</Th>
-              <Th>Last Login</Th>
-              <Th>Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id}>
-                <Td>
-                  <strong>{user.full_name || 'Unnamed User'}</strong>
-                  <div style={{ color: '#64748b', fontSize: 13 }}>{user.email}</div>
-                </Td>
-                <Td>{getRoleDisplayName(user.role)}</Td>
-                <Td>{user.title || '—'}</Td>
-                <Td>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {user.active ? badge('Active', 'green') : badge('Inactive', 'gray')}
-                    {isLocked(user) && badge('Locked', 'red')}
-                  </div>
-                </Td>
-                <Td>{user.mfa_required ? badge('MFA', 'blue') : badge('No MFA', 'yellow')}</Td>
-                <Td>{user.failed_login_count ?? 0}</Td>
-                <Td>{user.last_login_at ? new Date(user.last_login_at).toLocaleString() : 'Never'}</Td>
-                <Td>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <button style={smallButton} onClick={() => onEdit(user)}>Edit</button>
-                    {user.active ? (
-                      <button style={smallButton} onClick={() => onDisable(user.id)}>Disable</button>
-                    ) : (
-                      <button style={smallButton} onClick={() => onEnable(user.id)}>Enable</button>
-                    )}
-                    {isLocked(user) ? (
-                      <button style={smallButton} onClick={() => onUnlock(user.id)}>Unlock</button>
-                    ) : (
-                      <button style={smallButton} onClick={() => onLock(user.id)}>Lock</button>
-                    )}
-                    <button style={smallButton} onClick={() => onRequireMfa(user.id, !user.mfa_required)}>
-                      {user.mfa_required ? 'Remove MFA' : 'Require MFA'}
-                    </button>
-                    <button style={smallButton} onClick={() => onResetFailedLogins(user.id)}>Reset Logins</button>
-                  </div>
-                </Td>
-              </tr>
-            ))}
+  function toggleSelected(id: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
-            {users.length === 0 && (
-              <tr>
-                <td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
-                  No users found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+  function toggleAllVisible() {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      const shouldSelectAll = !allVisibleSelected;
+
+      for (const user of users) {
+        if (shouldSelectAll) next.add(user.id);
+        else next.delete(user.id);
+      }
+
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function runBulk(action: (users: TenantUser[]) => void) {
+    if (selectedUsers.length === 0) return;
+    action(selectedUsers);
+    clearSelection();
+  }
+
+  return (
+    <div>
+      {selectedUsers.length > 0 && (
+        <section style={bulkBar}>
+          <strong>{selectedUsers.length} selected</strong>
+
+          <button style={smallButton} onClick={() => runBulk(onBulkEnable)}>
+            Enable
+          </button>
+
+          <button style={smallButton} onClick={() => runBulk(onBulkDisable)}>
+            Disable
+          </button>
+
+          <button style={smallButton} onClick={() => runBulk(onBulkLock)}>
+            Lock
+          </button>
+
+          <button style={smallButton} onClick={() => runBulk(onBulkUnlock)}>
+            Unlock
+          </button>
+
+          <button style={smallButton} onClick={() => runBulk((rows) => onBulkRequireMfa(rows, true))}>
+            Require MFA
+          </button>
+
+          <button style={smallButton} onClick={() => runBulk((rows) => onBulkRequireMfa(rows, false))}>
+            Remove MFA
+          </button>
+
+          <button style={smallButton} onClick={() => runBulk(onBulkResetFailedLogins)}>
+            Reset Logins
+          </button>
+
+          <button style={smallButton} onClick={clearSelection}>
+            Clear
+          </button>
+        </section>
       )}
+
+      <div style={tableWrap}>
+        {loading ? (
+          <div style={{ padding: 24 }}>Loading users...</div>
+        ) : (
+          <table style={table}>
+            <thead>
+              <tr>
+                <Th>
+                  <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} />
+                </Th>
+                <Th>User</Th>
+                <Th>Role</Th>
+                <Th>Title</Th>
+                <Th>Status</Th>
+                <Th>Security</Th>
+                <Th>Failed Logins</Th>
+                <Th>Last Login</Th>
+                <Th>Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id}>
+                  <Td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(user.id)}
+                      onChange={() => toggleSelected(user.id)}
+                    />
+                  </Td>
+                  <Td>
+                    <strong>{user.full_name || 'Unnamed User'}</strong>
+                    <div style={{ color: '#64748b', fontSize: 13 }}>{user.email}</div>
+                  </Td>
+                  <Td>{getRoleDisplayName(user.role)}</Td>
+                  <Td>{user.title || '—'}</Td>
+                  <Td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {user.active ? badge('Active', 'green') : badge('Inactive', 'gray')}
+                      {isLocked(user) && badge('Locked', 'red')}
+                    </div>
+                  </Td>
+                  <Td>{user.mfa_required ? badge('MFA', 'blue') : badge('No MFA', 'yellow')}</Td>
+                  <Td>{user.failed_login_count ?? 0}</Td>
+                  <Td>{user.last_login_at ? new Date(user.last_login_at).toLocaleString() : 'Never'}</Td>
+                  <Td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button style={smallButton} onClick={() => onEdit(user)}>Edit</button>
+                      {user.active ? (
+                        <button style={smallButton} onClick={() => onDisable(user.id)}>Disable</button>
+                      ) : (
+                        <button style={smallButton} onClick={() => onEnable(user.id)}>Enable</button>
+                      )}
+                      {isLocked(user) ? (
+                        <button style={smallButton} onClick={() => onUnlock(user.id)}>Unlock</button>
+                      ) : (
+                        <button style={smallButton} onClick={() => onLock(user.id)}>Lock</button>
+                      )}
+                      <button style={smallButton} onClick={() => onRequireMfa(user.id, !user.mfa_required)}>
+                        {user.mfa_required ? 'Remove MFA' : 'Require MFA'}
+                      </button>
+                      <button style={smallButton} onClick={() => onResetFailedLogins(user.id)}>Reset Logins</button>
+                    </div>
+                  </Td>
+                </tr>
+              ))}
+
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={9} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
+                    No users found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
@@ -134,8 +238,51 @@ function Td({ children }: { children: React.ReactNode }) {
   return <td style={td}>{children}</td>;
 }
 
-const tableWrap: React.CSSProperties = { border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'auto', background: 'white' };
-const table: React.CSSProperties = { width: '100%', borderCollapse: 'collapse' };
-const th: React.CSSProperties = { textAlign: 'left', padding: '12px 10px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 13 };
-const td: React.CSSProperties = { padding: '12px 10px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'top', fontSize: 14 };
-const smallButton: React.CSSProperties = { background: 'white', color: '#0f172a', border: '1px solid #cbd5e1', borderRadius: 6, padding: '5px 8px', fontSize: 12, cursor: 'pointer' };
+const bulkBar: React.CSSProperties = {
+  display: 'flex',
+  gap: 8,
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: 12,
+  padding: 12,
+  marginBottom: 16,
+};
+
+const tableWrap: React.CSSProperties = {
+  border: '1px solid #e2e8f0',
+  borderRadius: 12,
+  overflow: 'auto',
+  background: 'white',
+};
+
+const table: React.CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+};
+
+const th: React.CSSProperties = {
+  textAlign: 'left',
+  padding: '12px 10px',
+  borderBottom: '1px solid #e2e8f0',
+  background: '#f8fafc',
+  fontSize: 13,
+};
+
+const td: React.CSSProperties = {
+  padding: '12px 10px',
+  borderBottom: '1px solid #f1f5f9',
+  verticalAlign: 'top',
+  fontSize: 14,
+};
+
+const smallButton: React.CSSProperties = {
+  background: 'white',
+  color: '#0f172a',
+  border: '1px solid #cbd5e1',
+  borderRadius: 6,
+  padding: '5px 8px',
+  fontSize: 12,
+  cursor: 'pointer',
+};
