@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import AdminFormField, { fieldA11y } from './AdminFormField';
 import { TenantUser } from './UserTypes';
 
 type Props = {
@@ -18,6 +19,8 @@ export default function PasswordResetDialog({
   onClose,
   onSubmit,
 }: Props) {
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+
   const [forcePasswordChange, setForcePasswordChange] = useState(true);
   const [redirectTo, setRedirectTo] = useState('');
   const [localError, setLocalError] = useState('');
@@ -25,13 +28,30 @@ export default function PasswordResetDialog({
   useEffect(() => {
     if (!open) return;
 
+    const previousActiveElement = document.activeElement as HTMLElement | null;
+
     setForcePasswordChange(true);
     setLocalError('');
 
     if (typeof window !== 'undefined') {
       setRedirectTo(`${window.location.origin}/login`);
     }
-  }, [open]);
+
+    window.setTimeout(() => cancelButtonRef.current?.focus(), 0);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement?.focus?.();
+    };
+  }, [open, onClose]);
 
   if (!open || !user) return null;
 
@@ -54,12 +74,20 @@ export default function PasswordResetDialog({
   }
 
   return (
-    <div style={backdrop}>
-      <aside style={dialog}>
+    <div style={backdrop} role="presentation">
+      <aside
+        style={dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="password-reset-title"
+        aria-describedby="password-reset-description"
+      >
         <div style={header}>
           <div>
-            <h2 style={{ margin: 0 }}>Password Reset</h2>
-            <p style={{ margin: '6px 0 0', color: '#64748b' }}>
+            <h2 id="password-reset-title" style={{ margin: 0 }}>
+              Password Reset
+            </h2>
+            <p id="password-reset-description" style={{ margin: '6px 0 0', color: '#64748b' }}>
               Generate a Supabase recovery link for this user.
             </p>
           </div>
@@ -69,7 +97,7 @@ export default function PasswordResetDialog({
           </button>
         </div>
 
-        {localError && <div style={errorBox}>{localError}</div>}
+        {localError && <div role="alert" style={errorBox}>{localError}</div>}
 
         <div style={card}>
           <div style={{ color: '#64748b', fontSize: 13 }}>User</div>
@@ -77,17 +105,23 @@ export default function PasswordResetDialog({
           <div style={{ color: '#64748b', fontSize: 13 }}>{activeUser.email}</div>
         </div>
 
-        <label style={field}>
-          <span style={label}>Redirect URL</span>
+        <AdminFormField
+          id="password-reset-redirect-url"
+          label="Redirect URL"
+          hint="This should point to your app page that handles password recovery."
+          error={!redirectTo.trim() && localError ? 'Redirect URL is required.' : undefined}
+        >
           <input
+            {...fieldA11y(
+              'password-reset-redirect-url',
+              'This should point to your app page that handles password recovery.',
+              !redirectTo.trim() && localError ? 'Redirect URL is required.' : undefined
+            )}
             value={redirectTo}
             onChange={(event) => setRedirectTo(event.target.value)}
             style={input}
           />
-          <span style={hint}>
-            This should point to your app page that handles password recovery.
-          </span>
-        </label>
+        </AdminFormField>
 
         <label style={checkRow}>
           <input
@@ -105,7 +139,12 @@ export default function PasswordResetDialog({
         </label>
 
         <footer style={footer}>
-          <button type="button" style={secondaryButton} onClick={onClose}>
+          <button
+            ref={cancelButtonRef}
+            type="button"
+            style={secondaryButton}
+            onClick={onClose}
+          >
             Cancel
           </button>
 
@@ -152,22 +191,6 @@ const card: React.CSSProperties = {
   marginBottom: 14,
 };
 
-const field: React.CSSProperties = {
-  display: 'grid',
-  gap: 5,
-  marginBottom: 14,
-};
-
-const label: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 600,
-};
-
-const hint: React.CSSProperties = {
-  color: '#64748b',
-  fontSize: 12,
-};
-
 const input: React.CSSProperties = {
   width: '100%',
   padding: '9px 10px',
@@ -182,6 +205,7 @@ const checkRow: React.CSSProperties = {
   border: '1px solid #e2e8f0',
   borderRadius: 12,
   padding: 14,
+  marginTop: 14,
 };
 
 const footer: React.CSSProperties = {

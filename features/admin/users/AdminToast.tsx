@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 
 export type AdminToastState = {
   type: 'success' | 'error';
@@ -13,12 +13,24 @@ type AdminToastProps = {
 };
 
 export default function AdminToast({ toast, onClose }: AdminToastProps) {
+  useEffect(() => {
+    if (!toast) return;
+
+    const timeout = window.setTimeout(() => {
+      onClose();
+    }, 5000);
+
+    return () => window.clearTimeout(timeout);
+  }, [toast, onClose]);
+
   if (!toast) return null;
 
   const isSuccess = toast.type === 'success';
 
   return (
     <div
+      role={isSuccess ? 'status' : 'alert'}
+      aria-live={isSuccess ? 'polite' : 'assertive'}
       style={{
         ...toastBox,
         background: isSuccess ? '#dcfce7' : '#fee2e2',
@@ -29,7 +41,7 @@ export default function AdminToast({ toast, onClose }: AdminToastProps) {
       <strong>{isSuccess ? 'Success' : 'Error'}</strong>
       <span>{toast.message}</span>
 
-      <button type="button" onClick={onClose} style={closeButton}>
+      <button type="button" aria-label="Dismiss notification" onClick={onClose} style={closeButton}>
         ×
       </button>
     </div>

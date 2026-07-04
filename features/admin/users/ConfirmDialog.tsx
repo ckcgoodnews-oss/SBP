@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -23,16 +23,55 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const previousActiveElement = document.activeElement as HTMLElement | null;
+
+    cancelButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onCancel();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement?.focus?.();
+    };
+  }, [open, onCancel]);
+
   if (!open) return null;
 
   return (
-    <div style={backdrop}>
-      <aside style={dialog}>
-        <h2 style={{ margin: 0 }}>{title}</h2>
-        <p style={{ color: '#64748b', lineHeight: 1.5 }}>{message}</p>
+    <div style={backdrop} role="presentation">
+      <aside
+        style={dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-message"
+      >
+        <h2 id="confirm-dialog-title" style={{ margin: 0 }}>
+          {title}
+        </h2>
+
+        <p id="confirm-dialog-message" style={{ color: '#64748b', lineHeight: 1.5 }}>
+          {message}
+        </p>
 
         <footer style={footer}>
-          <button type="button" style={secondaryButton} onClick={onCancel}>
+          <button
+            ref={cancelButtonRef}
+            type="button"
+            style={secondaryButton}
+            onClick={onCancel}
+          >
             {cancelLabel}
           </button>
 
