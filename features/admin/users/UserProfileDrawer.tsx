@@ -82,7 +82,7 @@ export default function UserProfileDrawer({
 
   if (!open || !user) return null;
 
-  const currentUser = user;
+  const activeUser = user;
 
   function updateForm<K extends keyof UserForm>(key: K, value: UserForm[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -100,11 +100,11 @@ export default function UserProfileDrawer({
     }
 
     setLocalError('');
-    await onUpdate(currentUser.id, form);
+    await onUpdate(activeUser.id, form);
   }
 
   async function saveSecurity() {
-    await onRequireMfa(currentUser.id, form.mfa_required);
+    await onRequireMfa(activeUser.id, form.mfa_required);
     await save();
   }
 
@@ -113,8 +113,8 @@ export default function UserProfileDrawer({
       <aside style={drawer}>
         <div style={header}>
           <div>
-            <h2 style={{ margin: 0 }}>{currentUser.full_name || currentUser.email}</h2>
-            <p style={{ margin: '6px 0 0', color: '#64748b' }}>{currentUser.email}</p>
+            <h2 style={{ margin: 0 }}>{activeUser.full_name || activeUser.email}</h2>
+            <p style={{ margin: '6px 0 0', color: '#64748b' }}>{activeUser.email}</p>
           </div>
 
           <button type="button" style={smallButton} onClick={onClose}>
@@ -128,7 +128,7 @@ export default function UserProfileDrawer({
 
         {activeTab === 'overview' && (
           <UserOverviewTab
-            user={currentUser}
+            user={activeUser}
             form={form}
             roles={roles}
             departments={departments}
@@ -140,38 +140,38 @@ export default function UserProfileDrawer({
 
         {activeTab === 'security' && (
           <UserSecurityTab
-            user={currentUser}
+            user={activeUser}
             form={form}
             saving={saving}
             onChange={updateForm}
             onSave={() => void saveSecurity()}
-            onEnable={() => void onEnable(currentUser.id)}
-            onDisable={() => void onDisable(currentUser.id)}
-            onLock={() => void onLock(currentUser.id, 'Locked from user profile drawer')}
-            onUnlock={() => void onUnlock(currentUser.id)}
-            onResetFailedLogins={() => void onResetFailedLogins(currentUser.id)}
+            onEnable={() => void onEnable(activeUser.id)}
+            onDisable={() => void onDisable(activeUser.id)}
+            onLock={() => void onLock(activeUser.id, 'Locked from user profile drawer')}
+            onUnlock={() => void onUnlock(activeUser.id)}
+            onResetFailedLogins={() => void onResetFailedLogins(activeUser.id)}
             onPasswordReset={() => setPasswordResetOpen(true)}
           />
         )}
 
-        {activeTab === 'roles' && <UserRolesTab user={currentUser} roles={roles} />}
+        {activeTab === 'roles' && <UserRolesTab user={activeUser} roles={roles} />}
 
         {activeTab === 'sessions' && (
-          <UserSessionsTab user={currentUser} sessions={sessions} onRevoke={(id) => void onRevokeSession(id)} />
+          <UserSessionsTab user={activeUser} sessions={sessions} onRevoke={(id) => void onRevokeSession(id)} />
         )}
 
-        {activeTab === 'audit' && <UserAuditTab user={currentUser} events={auditEvents} />}
+        {activeTab === 'audit' && <UserAuditTab user={activeUser} events={auditEvents} />}
 
-        {activeTab === 'apiKeys' && <UserApiKeysTab user={currentUser} />}
-
-        <PasswordResetDialog
-          open={passwordResetOpen}
-          user={currentUser}
-          saving={saving}
-          onClose={() => setPasswordResetOpen(false)}
-          onSend={onPasswordReset}
-        />
+        {activeTab === 'apiKeys' && <UserApiKeysTab user={activeUser} />}
       </aside>
+
+      <PasswordResetDialog
+        open={passwordResetOpen}
+        user={activeUser}
+        saving={saving}
+        onClose={() => setPasswordResetOpen(false)}
+        onSubmit={onPasswordReset}
+      />
     </div>
   );
 }

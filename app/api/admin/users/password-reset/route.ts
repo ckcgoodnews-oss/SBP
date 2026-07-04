@@ -18,9 +18,9 @@ export async function POST(request: Request) {
       .single();
 
     if (userError) throw userError;
-    if (!user?.email) {
-      return fail(new Error('User email not found'), 400);
-    }
+    if (!user) return fail(new Error('User not found'), 404);
+
+    const forcePasswordChange = Boolean(body.forcePasswordChange);
 
     await supabase.from('audit_logs').insert({
       tenant_id: user.tenant_id,
@@ -31,16 +31,17 @@ export async function POST(request: Request) {
       target_user_id: user.id,
       target_email: user.email,
       metadata: {
-        force_password_change: Boolean(body.forcePasswordChange),
+        force_password_change: forcePasswordChange,
         delivery_method: 'email',
       },
     });
 
     return ok({
-      userId: user.id,
+      user_id: user.id,
       email: user.email,
-      forcePasswordChange: Boolean(body.forcePasswordChange),
-      message: 'Password reset request recorded. Email delivery integration is ready to wire next.',
+      force_password_change: forcePasswordChange,
+      status: 'reset_requested',
+      message: 'Password reset request recorded. Email delivery integration will be connected next.',
     });
   } catch (error) {
     return fail(error);

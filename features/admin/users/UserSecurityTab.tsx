@@ -68,10 +68,10 @@ export default function UserSecurityTab({
       <div style={card}>
         <h3 style={heading}>Password Reset</h3>
         <p style={{ color: '#64748b', marginTop: 0 }}>
-          Send a password reset request for this user. Email delivery is stubbed and ready for SendGrid/Supabase Auth integration.
+          Send a password reset request and optionally require the user to change their password at next login.
         </p>
 
-        <button type="button" style={secondaryButton} onClick={onPasswordReset}>
+        <button type="button" disabled={saving} style={primaryButton} onClick={onPasswordReset}>
           Send Password Reset
         </button>
       </div>

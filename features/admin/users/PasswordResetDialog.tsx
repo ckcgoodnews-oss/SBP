@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TenantUser } from './UserTypes';
 
 type Props = {
@@ -8,7 +8,7 @@ type Props = {
   user: TenantUser | null;
   saving: boolean;
   onClose: () => void;
-  onSend: (userId: string, forcePasswordChange: boolean) => Promise<unknown>;
+  onSubmit: (userId: string, forcePasswordChange: boolean) => Promise<unknown>;
 };
 
 export default function PasswordResetDialog({
@@ -16,12 +16,12 @@ export default function PasswordResetDialog({
   user,
   saving,
   onClose,
-  onSend,
+  onSubmit,
 }: Props) {
   const [forcePasswordChange, setForcePasswordChange] = useState(true);
   const [localError, setLocalError] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!open) return;
     setForcePasswordChange(true);
     setLocalError('');
@@ -29,17 +29,17 @@ export default function PasswordResetDialog({
 
   if (!open || !user) return null;
 
-  const currentUser = user;
+  const activeUser = user;
 
   async function submit() {
-    setLocalError('');
-
-    try {
-      await onSend(currentUser.id, forcePasswordChange);
-      onClose();
-    } catch (error) {
-      setLocalError(error instanceof Error ? error.message : 'Failed to request password reset');
+    if (!activeUser.id) {
+      setLocalError('Missing user id.');
+      return;
     }
+
+    setLocalError('');
+    await onSubmit(activeUser.id, forcePasswordChange);
+    onClose();
   }
 
   return (
@@ -62,8 +62,8 @@ export default function PasswordResetDialog({
 
         <div style={card}>
           <div style={{ color: '#64748b', fontSize: 13 }}>User</div>
-          <strong>{currentUser.full_name || currentUser.email}</strong>
-          <div style={{ color: '#64748b', marginTop: 4 }}>{currentUser.email}</div>
+          <strong>{activeUser.full_name || activeUser.email}</strong>
+          <div style={{ color: '#64748b', fontSize: 13 }}>{activeUser.email}</div>
         </div>
 
         <label style={checkRow}>
@@ -76,7 +76,7 @@ export default function PasswordResetDialog({
             <strong>Force password change at next login</strong>
             <br />
             <span style={{ color: '#64748b', fontSize: 13 }}>
-              The reset request will be marked as requiring a password change.
+              Recommended when resetting access for a locked, compromised, or inactive account.
             </span>
           </span>
         </label>
@@ -98,7 +98,7 @@ export default function PasswordResetDialog({
 const backdrop: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  background: 'rgba(15, 23, 42, 0.45)',
+  background: 'rgba(15, 23, 42, 0.35)',
   display: 'grid',
   placeItems: 'center',
   zIndex: 80,
@@ -106,11 +106,11 @@ const backdrop: React.CSSProperties = {
 
 const dialog: React.CSSProperties = {
   width: 460,
-  maxWidth: 'calc(100vw - 32px)',
+  maxWidth: 'calc(100% - 32px)',
   background: 'white',
-  borderRadius: 16,
+  borderRadius: 14,
   padding: 24,
-  boxShadow: '0 20px 50px rgba(15, 23, 42, 0.25)',
+  boxShadow: '0 25px 70px rgba(15, 23, 42, 0.28)',
 };
 
 const header: React.CSSProperties = {
@@ -126,22 +126,23 @@ const card: React.CSSProperties = {
   padding: 14,
   background: '#f8fafc',
   marginTop: 18,
+  marginBottom: 14,
 };
 
 const checkRow: React.CSSProperties = {
   display: 'flex',
   gap: 10,
   alignItems: 'flex-start',
-  marginTop: 18,
+  border: '1px solid #e2e8f0',
+  borderRadius: 12,
+  padding: 14,
 };
 
 const footer: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   gap: 12,
-  marginTop: 24,
-  borderTop: '1px solid #e2e8f0',
-  paddingTop: 16,
+  marginTop: 20,
 };
 
 const primaryButton: React.CSSProperties = {
