@@ -32,6 +32,12 @@ export default function AdminUsersPage() {
     unlockUser,
     requireMfa,
     resetFailedLogins,
+    bulkEnableUsers,
+    bulkDisableUsers,
+    bulkLockUsers,
+    bulkUnlockUsers,
+    bulkRequireMfa,
+    bulkResetFailedLogins,
   } = useUsers();
 
   const [query, setQuery] = useState('');
@@ -76,12 +82,6 @@ export default function AdminUsersPage() {
     setEditingUser(null);
   }
 
-  async function runBulk(usersToUpdate: TenantUser[], action: (id: string) => Promise<unknown>) {
-    for (const user of usersToUpdate) {
-      await action(user.id);
-    }
-  }
-
   return (
     <main style={{ padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
@@ -115,7 +115,7 @@ export default function AdminUsersPage() {
       />
 
       <UserGrid
-        loading={loading}
+        loading={loading || saving}
         users={filteredRows}
         roles={roles}
         onEdit={openEdit}
@@ -125,12 +125,12 @@ export default function AdminUsersPage() {
         onUnlock={(id) => void unlockUser(id)}
         onRequireMfa={(id, required) => void requireMfa(id, required)}
         onResetFailedLogins={(id) => void resetFailedLogins(id)}
-        onBulkEnable={(selected) => void runBulk(selected, enableUser)}
-        onBulkDisable={(selected) => void runBulk(selected, disableUser)}
-        onBulkLock={(selected) => void runBulk(selected, (id) => lockUser(id, 'Bulk lock from administration console'))}
-        onBulkUnlock={(selected) => void runBulk(selected, unlockUser)}
-        onBulkRequireMfa={(selected, required) => void runBulk(selected, (id) => requireMfa(id, required))}
-        onBulkResetFailedLogins={(selected) => void runBulk(selected, resetFailedLogins)}
+        onBulkEnable={(selected) => void bulkEnableUsers(selected)}
+        onBulkDisable={(selected) => void bulkDisableUsers(selected)}
+        onBulkLock={(selected) => void bulkLockUsers(selected)}
+        onBulkUnlock={(selected) => void bulkUnlockUsers(selected)}
+        onBulkRequireMfa={(selected, required) => void bulkRequireMfa(selected, required)}
+        onBulkResetFailedLogins={(selected) => void bulkResetFailedLogins(selected)}
       />
 
       <UserWizard
