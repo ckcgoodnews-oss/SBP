@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+import AdminEmptyState from './AdminEmptyState';
+import AdminLoadingState from './AdminLoadingState';
+import AdminSectionHeader from './AdminSectionHeader';
 import { UserSession } from './useUserSessions';
 
 type UserSessionsGridProps = {
@@ -40,18 +43,19 @@ export default function UserSessionsGrid({
 }: UserSessionsGridProps) {
   return (
     <section style={{ marginTop: 28 }}>
-      <div style={header}>
-        <div>
-          <h2 style={{ margin: 0 }}>User Sessions</h2>
-          <p style={{ marginTop: 6, color: '#64748b' }}>
-            Monitor active sessions, device information, IP addresses, and revoked sessions.
-          </p>
-        </div>
-      </div>
+      <AdminSectionHeader
+        title="User Sessions"
+        description="Monitor active sessions, device information, IP addresses, and revoked sessions."
+      />
 
       <div style={tableWrap}>
         {loading ? (
-          <div style={{ padding: 24 }}>Loading sessions...</div>
+          <AdminLoadingState label="Loading sessions..." />
+        ) : sessions.length === 0 ? (
+          <AdminEmptyState
+            title="No sessions found"
+            message="Session records will appear here when users sign in."
+          />
         ) : (
           <table style={table}>
             <thead>
@@ -96,14 +100,6 @@ export default function UserSessionsGrid({
                   </Td>
                 </tr>
               ))}
-
-              {sessions.length === 0 && (
-                <tr>
-                  <td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
-                    No sessions found.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         )}
@@ -119,14 +115,6 @@ function Th({ children }: { children: React.ReactNode }) {
 function Td({ children }: { children: React.ReactNode }) {
   return <td style={td}>{children}</td>;
 }
-
-const header: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 16,
-  alignItems: 'center',
-  marginBottom: 12,
-};
 
 const tableWrap: React.CSSProperties = {
   border: '1px solid #e2e8f0',

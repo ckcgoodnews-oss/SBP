@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+import AdminEmptyState from './AdminEmptyState';
+import AdminLoadingState from './AdminLoadingState';
+import AdminSectionHeader from './AdminSectionHeader';
 import { IamInvitation, IamRole } from './UserTypes';
 
 type InvitationGridProps = {
@@ -53,18 +56,19 @@ export default function InvitationGrid({
 
   return (
     <section style={{ marginTop: 28 }}>
-      <div style={header}>
-        <div>
-          <h2 style={{ margin: 0 }}>Pending Invitations</h2>
-          <p style={{ marginTop: 6, color: '#64748b' }}>
-            Track user invitations, expiration, and onboarding status.
-          </p>
-        </div>
-      </div>
+      <AdminSectionHeader
+        title="Pending Invitations"
+        description="Track user invitations, expiration, and onboarding status."
+      />
 
       <div style={tableWrap}>
         {loading ? (
-          <div style={{ padding: 24 }}>Loading invitations...</div>
+          <AdminLoadingState label="Loading invitations..." />
+        ) : invitations.length === 0 ? (
+          <AdminEmptyState
+            title="No invitations found"
+            message="Pending invitations will appear here after you invite users."
+          />
         ) : (
           <table style={table}>
             <thead>
@@ -110,14 +114,6 @@ export default function InvitationGrid({
                   </Td>
                 </tr>
               ))}
-
-              {invitations.length === 0 && (
-                <tr>
-                  <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
-                    No invitations found.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         )}
@@ -133,14 +129,6 @@ function Th({ children }: { children: React.ReactNode }) {
 function Td({ children }: { children: React.ReactNode }) {
   return <td style={td}>{children}</td>;
 }
-
-const header: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 16,
-  alignItems: 'center',
-  marginBottom: 12,
-};
 
 const tableWrap: React.CSSProperties = {
   border: '1px solid #e2e8f0',
