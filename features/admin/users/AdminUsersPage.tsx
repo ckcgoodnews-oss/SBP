@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react';
 import AdminToast from './AdminToast';
 import AdminUsersWorkspaceTabs, { AdminUsersWorkspaceTab } from './AdminUsersWorkspaceTabs';
 import InvitationGrid from './InvitationGrid';
+import InvitationToolbar, { InvitationStatusFilter } from './InvitationToolbar';
 import InvitationWizard from './InvitationWizard';
 import UserAuditGrid from './UserAuditGrid';
 import UserAuditToolbar, { UserAuditActionFilter } from './UserAuditToolbar';
@@ -14,8 +15,9 @@ import UserProfileDrawer from './UserProfileDrawer';
 import UserSessionsGrid from './UserSessionsGrid';
 import UserStats from './UserStats';
 import UserToolbar, { UserStatusFilter } from './UserToolbar';
-import { TenantUser } from './UserTypes';
+import { IamInvitation, TenantUser } from './UserTypes';
 import UserWizard from './UserWizard';
+import { exportInvitationsCsv } from './invitationExport';
 import { exportUsersCsv } from './userExport';
 import { exportUserAuditCsv } from './userAuditExport';
 import { useAdminFeedback } from './useAdminFeedback';
@@ -27,6 +29,11 @@ import { useUsers } from './useUsers';
 function isLocked(user: TenantUser) {
   if (!user.locked_until) return false;
   return new Date(user.locked_until).getTime() > Date.now();
+}
+
+function invitationIsExpired(invitation: IamInvitation) {
+  if (!invitation.expires_at) return false;
+  return new Date(invitation.expires_at).getTime() < Date.now();
 }
 
 function sortValue(user: TenantUser, key: UserSortKey) {
@@ -73,6 +80,31 @@ function auditMatchesQuery(event: UserAuditEvent, query: string) {
     .toLowerCase();
 
   return searchable.includes(text);
+}
+
+function invitationMatchesStatus(invitation: IamInvitation, filter: InvitationStatusFilter) {
+  if (filter === 'all') return true;
+  if (filter === 'expired') return invitation.status === 'pending' && invitationIsExpired(invitation);
+  if (filter === 'pending') return invitation.status === 'pending' && !invitationIsExpired(invitation);
+  return invitation.status === filter;
+}
+
+function invitationMatchesQuery(invitation: IamInvitation, query: string) {
+  const text = query.trim().toLowerCase();
+  if (!text) return true;
+
+  return [
+    invitation.email,
+    invitation.full_name,
+    invitation.role_key,
+    invitation.status,
+    invitation.created_by_email,
+    invitation.invitation_token,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+    .includes(text);
 }
 
 export default function AdminUsersPage() {
@@ -130,8 +162,13 @@ export default function AdminUsersPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+
   const [auditQuery, setAuditQuery] = useState('');
   const [auditActionFilter, setAuditActionFilter] = useState<UserAuditActionFilter>('all');
+
+  const [invitationQuery, setInvitationQuery] = useState('');
+  const [invitationStatusFilter, setInvitationStatusFilter] = useState<InvitationStatusFilter>('all');
+
   const [wizardOpen, setWizardOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [profileUser, setProfileUser] = useState<TenantUser | null>(null);
@@ -180,6 +217,14 @@ export default function AdminUsersPage() {
       (event) => auditMatchesFilter(event, auditActionFilter) && auditMatchesQuery(event, auditQuery)
     );
   }, [auditEvents, auditActionFilter, auditQuery]);
+
+  const filteredInvitations = useMemo(() => {
+    return invitations.filter(
+      (invitation) =>
+        invitationMatchesStatus(invitation, invitationStatusFilter) &&
+        invitationMatchesQuery(invitation, invitationQuery)
+    );
+  }, [invitations, invitationStatusFilter, invitationQuery]);
 
   function changeSort(key: UserSortKey) {
     if (key === sortKey) {
@@ -319,12 +364,27 @@ export default function AdminUsersPage() {
       )}
 
       {workspaceTab === 'invitations' && (
-        <InvitationGrid
-          loading={loadingInvitations || savingInvitation}
-          invitations={invitations}
-          roles={roles}
-          onCancel={(id) => runAction(() => cancelInvitation(id), 'Invitation cancelled.')}
-        />
+        <>
+          <InvitationToolbar
+            query={invitationQuery}
+            statusFilter={invitationStatusFilter}
+            totalCount={invitations.length}
+            filteredCount={filteredInvitations.length}
+            onQueryChange={setInvitationQuery}
+            onStatusFilterChange={setInvitationStatusFilter}
+            onExportCsv={() => {
+              exportInvitationsCsv(filteredInvitations, roles);
+              notifySuccess('Invitation CSV export created.');
+            }}
+          />
+
+          <InvitationGrid
+            loading={loadingInvitations || savingInvitation}
+            invitations={filteredInvitations}
+            roles={roles}
+            onCancel={(id) => runAction(() => cancelInvitation(id), 'Invitation cancelled.')}
+          />
+        </>
       )}
 
       {workspaceTab === 'sessions' && (

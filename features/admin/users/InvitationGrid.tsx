@@ -72,7 +72,7 @@ export default function InvitationGrid({
         ) : invitations.length === 0 ? (
           <AdminEmptyState
             title="No invitations found"
-            message="Pending invitations will appear here after you invite users."
+            message="No invitations match the current search or filter."
           />
         ) : (
           <table style={table}>
