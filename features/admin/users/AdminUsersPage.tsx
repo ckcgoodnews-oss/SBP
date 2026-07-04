@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 
 import UserStats from './UserStats';
+import UserToolbar, { UserStatusFilter } from './UserToolbar';
 import UserWizard from './UserWizard';
 import { TenantUser } from './UserTypes';
 import { useUsers } from './useUsers';
@@ -48,7 +49,7 @@ export default function AdminUsersPage() {
   } = useUsers();
 
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'locked' | 'mfa'>('all');
+  const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
 
@@ -117,26 +118,13 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      <section style={toolbar}>
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search users by name, email, role, or title..."
-          style={input}
-        />
-
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} style={select}>
-          <option value="all">All users</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="locked">Locked</option>
-          <option value="mfa">MFA required</option>
-        </select>
-
-        <button onClick={() => void refresh()} style={secondaryButton}>
-          Refresh
-        </button>
-      </section>
+      <UserToolbar
+        query={query}
+        statusFilter={statusFilter}
+        onQueryChange={setQuery}
+        onStatusFilterChange={setStatusFilter}
+        onRefresh={() => void refresh()}
+      />
 
       <div style={tableWrap}>
         {loading ? (
@@ -230,13 +218,9 @@ function Td({ children }: { children: React.ReactNode }) {
   return <td style={td}>{children}</td>;
 }
 
-const toolbar: React.CSSProperties = { display: 'flex', gap: 12, marginBottom: 16 };
 const tableWrap: React.CSSProperties = { border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'auto', background: 'white' };
 const table: React.CSSProperties = { width: '100%', borderCollapse: 'collapse' };
 const th: React.CSSProperties = { textAlign: 'left', padding: '12px 10px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 13 };
 const td: React.CSSProperties = { padding: '12px 10px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'top', fontSize: 14 };
-const input: React.CSSProperties = { width: '100%', padding: '9px 10px', border: '1px solid #cbd5e1', borderRadius: 8 };
-const select: React.CSSProperties = { padding: '9px 10px', border: '1px solid #cbd5e1', borderRadius: 8 };
 const primaryButton: React.CSSProperties = { background: '#0f172a', color: 'white', border: 0, borderRadius: 8, padding: '9px 14px', cursor: 'pointer' };
-const secondaryButton: React.CSSProperties = { background: 'white', color: '#0f172a', border: '1px solid #cbd5e1', borderRadius: 8, padding: '9px 14px', cursor: 'pointer' };
 const smallButton: React.CSSProperties = { background: 'white', color: '#0f172a', border: '1px solid #cbd5e1', borderRadius: 6, padding: '5px 8px', fontSize: 12, cursor: 'pointer' };
